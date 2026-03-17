@@ -7,7 +7,7 @@
 
 ## Step 1: Create Zoho OAuth Self Client
 
-1. Go to [Zoho API Console](https://api-console.zoho.in/) (use `.in` for India)
+1. Go to [Zoho API Console](https://api-console.zoho.in/) (use `.in` for India, `.com` for US, `.eu` for EU)
 2. Click **Add Client** → Select **Self Client**
 3. Note down your **Client ID** and **Client Secret**
 
@@ -32,9 +32,13 @@ curl -X POST "https://accounts.zoho.in/oauth/v2/token" \
 
 ## Step 3: Get Organization ID
 
-After getting the refresh token, you can find your Organization ID in:
+After getting the refresh token, find your Organization ID:
 - Zoho Books → Settings → Organization Profile → Organization ID
-- Or via API after configuring the server
+- Or via API:
+```bash
+curl -H "Authorization: Zoho-oauthtoken YOUR_ACCESS_TOKEN" \
+  "https://www.zohoapis.in/books/v3/organizations"
+```
 
 ## Step 4: Configure Environment
 
@@ -49,8 +53,15 @@ Edit `.env`:
 ZOHO_CLIENT_ID=1000.xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ZOHO_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ZOHO_REFRESH_TOKEN=1000.xxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx
-ZOHO_ORGANIZATION_ID=your_org_id_here
+ZOHO_ORGANIZATION_ID=your_default_org_id_here
 ZOHO_API_URL=https://www.zohoapis.in/books/v3
+```
+
+### Optional: Manual Org Aliases
+Org aliases are auto-discovered from organization names on first API call.
+To override with custom aliases, add:
+```
+ZOHO_ORG_ALIASES=naturnest:60026116971,infrax:60002170422
 ```
 
 ## Step 5: Build
@@ -68,13 +79,14 @@ Add to `~/.claude.json` under `mcpServers`:
 {
   "mcpServers": {
     "zoho-books": {
+      "type": "stdio",
       "command": "node",
-      "args": ["~/workspace_treta/skills/zoho-books/repo/dist/bin.js"],
+      "args": ["/path/to/zoho-books/repo/dist/bin.js"],
       "env": {
         "ZOHO_CLIENT_ID": "your_client_id",
         "ZOHO_CLIENT_SECRET": "your_client_secret",
         "ZOHO_REFRESH_TOKEN": "your_refresh_token",
-        "ZOHO_ORGANIZATION_ID": "your_org_id",
+        "ZOHO_ORGANIZATION_ID": "your_default_org_id",
         "ZOHO_API_URL": "https://www.zohoapis.in/books/v3"
       }
     }
@@ -85,17 +97,19 @@ Add to `~/.claude.json` under `mcpServers`:
 ## Step 7: Verify
 
 Restart Claude Code and test:
-- "List all Zoho Books organizations"
-- "Show chart of accounts"
-- "List recent invoices"
+- `list_organizations` — should show all orgs with auto-generated aliases
+- `switch_organization("alias")` — switch active org
+- `get_organization_summary` — CFO snapshot
+- `list_invoices` — should list invoices from default org
 
-## For Other Beings (Chanakya, etc.)
+## For Other Beings
 
 Each Being needs:
 1. Clone the repo or access the built `dist/` directory
-2. Same OAuth credentials (shared org) or separate credentials
+2. Same OAuth credentials (shared org access) or separate credentials
 3. Add MCP server config to their Claude Code / runtime config
-4. Read SKILL.md for available tools
+4. Read `SKILL.md` for 88 available tools
+5. Read `README_FOR_AGENTS.md` for workflows and gotchas
 
 ## Troubleshooting
 
@@ -106,3 +120,6 @@ Each Being needs:
 | `Request timeout` | Check network, Zoho API status |
 | `429 Too Many Requests` | Rate limit hit — wait 1 minute |
 | Region mismatch | Ensure API URL matches your Zoho datacenter (`.in` for India) |
+| PO item error 29032 | Create items with `purchase_rate` + `purchase_account_id` |
+| Estimate status error 4043 | Call `mark_estimate_sent` before `mark_estimate_accepted` |
+| Bill total is 0 | Use `rate` + `quantity` in line items, not `amount` |
