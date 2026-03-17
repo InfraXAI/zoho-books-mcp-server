@@ -74,7 +74,8 @@ Returns expense details with account, amount, and vendor info.`,
 
       const formatted = expenses
         .map((e, index) => {
-          return `${index + 1}. **${e.date}** - ${e.currency_code || ""} ${e.amount}
+          const amt = e.amount ?? (e as Record<string, unknown>).total ?? "N/A"
+          return `${index + 1}. **${e.date}** - ${e.currency_code || "INR"} ${amt}
    - Expense ID: \`${e.expense_id}\`
    - Account: ${e.account_name || e.account_id}
    - Vendor: ${e.vendor_name || "N/A"}
