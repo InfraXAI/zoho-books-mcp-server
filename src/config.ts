@@ -31,7 +31,7 @@ export function getZohoConfig(): ZohoConfig {
   const clientId = process.env.ZOHO_CLIENT_ID || ""
   const clientSecret = process.env.ZOHO_CLIENT_SECRET || ""
   const refreshToken = process.env.ZOHO_REFRESH_TOKEN || ""
-  const apiUrl = process.env.ZOHO_API_URL || "https://www.zohoapis.com/books/v3"
+  const apiUrl = process.env.ZOHO_API_URL || "https://www.zohoapis.in/books/v3"
   const organizationId = process.env.ZOHO_ORGANIZATION_ID || ""
 
   return {
