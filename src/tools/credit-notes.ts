@@ -70,8 +70,8 @@ Returns credit note number, customer, total, balance, and status.`,
           return `${index + 1}. **${cn.creditnote_number || "No number"}** - ${cn.customer_name || "Unknown customer"}
    - Credit Note ID: \`${cn.creditnote_id}\`
    - Date: ${cn.date}
-   - Total: ${cn.currency_code || ""} ${cn.total}
-   - Balance: ${cn.currency_code || ""} ${cn.balance || 0}
+   - Total: ${cn.currency_code || "INR"} ${cn.total}
+   - Balance: ${cn.currency_code || "INR"} ${cn.balance || 0}
    - Status: ${cn.status || "N/A"}`
         })
         .join("\n\n")
@@ -115,8 +115,8 @@ Returns full details including line items and remaining balance.`,
 - **Number**: ${cn.creditnote_number || "N/A"}
 - **Customer**: ${cn.customer_name || cn.customer_id}
 - **Date**: ${cn.date}
-- **Total**: ${cn.currency_code || ""} ${cn.total}
-- **Balance**: ${cn.currency_code || ""} ${cn.balance || 0}
+- **Total**: ${cn.currency_code || "INR"} ${cn.total}
+- **Balance**: ${cn.currency_code || "INR"} ${cn.balance || 0}
 - **Status**: ${cn.status || "N/A"}
 - **Reference**: ${cn.reference_number || "N/A"}
 - **Notes**: ${cn.notes || "N/A"}
@@ -125,7 +125,7 @@ Returns full details including line items and remaining balance.`,
 
       if (cn.line_items && cn.line_items.length > 0) {
         cn.line_items.forEach((item, i) => {
-          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - ${cn.currency_code || ""} ${item.amount}`
+          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - ${cn.currency_code || "INR"} ${(item as Record<string, unknown>).item_total ?? item.amount ?? "N/A"}`
           if (item.description) details += `\n   Description: ${item.description}`
           if (item.quantity && item.rate) details += `\n   ${item.quantity} x ${item.rate}`
         })
@@ -185,7 +185,7 @@ Credit notes can later be applied to outstanding invoices.`,
 - **Credit Note ID**: \`${cn.creditnote_id}\`
 - **Number**: ${cn.creditnote_number || "N/A"}
 - **Date**: ${cn.date}
-- **Total**: ${cn.currency_code || ""} ${cn.total}
+- **Total**: ${cn.currency_code || "INR"} ${cn.total}
 
 Use apply_credit_to_invoice to apply this credit against outstanding invoices.`
     },

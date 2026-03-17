@@ -123,7 +123,7 @@ Returns account details including balance, currency, and parent account info.`,
 - **User Created**: ${account.is_user_created ? "Yes" : "No (system account)"}`
 
       if (account.current_balance !== undefined) {
-        details += `\n- **Current Balance**: ${account.currency_code || ""} ${account.current_balance}`
+        details += `\n- **Current Balance**: ${account.currency_code || "INR"} ${account.current_balance}`
       }
 
       if (account.parent_account_name) {

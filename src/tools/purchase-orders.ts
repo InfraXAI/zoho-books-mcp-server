@@ -78,7 +78,7 @@ Returns purchase order details with vendor, total, and status.`,
    - PO ID: \`${po.purchaseorder_id}\`
    - Date: ${po.date}
    - Delivery Date: ${po.delivery_date || "N/A"}
-   - Total: ${po.currency_code || ""} ${po.total}
+   - Total: ${po.currency_code || "INR"} ${po.total}
    - Status: ${po.status || "N/A"}`
         })
         .join("\n\n")
@@ -126,7 +126,7 @@ Returns full purchase order details including line items and vendor info.`,
 - **Vendor**: ${po.vendor_name || po.vendor_id}
 - **Date**: ${po.date}
 - **Delivery Date**: ${po.delivery_date || "N/A"}
-- **Total**: ${po.currency_code || ""} ${po.total}
+- **Total**: ${po.currency_code || "INR"} ${po.total}
 - **Status**: ${po.status || "N/A"}
 - **Reference**: ${po.reference_number || "N/A"}
 - **Notes**: ${po.notes || "N/A"}
@@ -135,7 +135,7 @@ Returns full purchase order details including line items and vendor info.`,
 
       if (po.line_items && po.line_items.length > 0) {
         po.line_items.forEach((item: PurchaseOrderLineItem, i: number) => {
-          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${po.currency_code || ""} ${item.rate || 0} = ${po.currency_code || ""} ${item.amount}`
+          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${po.currency_code || "INR"} ${item.rate || 0} = ${po.currency_code || "INR"} ${(item as Record<string, unknown>).item_total ?? item.amount ?? "N/A"}`
           if (item.description) details += `\n   Description: ${item.description}`
         })
       }
@@ -200,7 +200,7 @@ Use list_items to find item_id values for line items.`,
 - **PO ID**: \`${po.purchaseorder_id}\`
 - **PO Number**: ${po.purchaseorder_number || "N/A"}
 - **Date**: ${po.date}
-- **Total**: ${po.currency_code || ""} ${po.total}
+- **Total**: ${po.currency_code || "INR"} ${po.total}
 
 Use this purchaseorder_id to update, open, or cancel this purchase order.`
     },
@@ -260,7 +260,7 @@ Only provided fields will be updated.`,
 
 - **PO ID**: \`${po.purchaseorder_id}\`
 - **PO Number**: ${po.purchaseorder_number || "N/A"}
-- **Total**: ${po.currency_code || ""} ${po.total}
+- **Total**: ${po.currency_code || "INR"} ${po.total}
 - **Status**: ${po.status || "N/A"}`
     },
   })

@@ -835,7 +835,7 @@ Returns account details including balance, currency, and parent account info.`,
 - **User Created**: ${account.is_user_created ? "Yes" : "No (system account)"}`;
       if (account.current_balance !== void 0) {
         details += `
-- **Current Balance**: ${account.currency_code || ""} ${account.current_balance}`;
+- **Current Balance**: ${account.currency_code || "INR"} ${account.current_balance}`;
       }
       if (account.parent_account_name) {
         details += `
@@ -1004,7 +1004,7 @@ Use date filters to narrow down results.`,
       const formatted = journals.map((j, index) => {
         return `${index + 1}. **${j.journal_date}** - ${j.reference_number || j.entry_number || "No ref"}
    - Journal ID: \`${j.journal_id}\`
-   - Total: ${j.currency_code || ""} ${j.total}
+   - Total: ${j.currency_code || "INR"} ${j.total}
    - Notes: ${j.notes || "N/A"}`;
       }).join("\n\n");
       return `**Journal Entries** (${journals.length} entries)
@@ -1045,7 +1045,7 @@ Returns full journal details including all line items.`,
 - **Date**: ${journal.journal_date}
 - **Entry Number**: ${journal.entry_number || "N/A"}
 - **Reference**: ${journal.reference_number || "N/A"}
-- **Total**: ${journal.currency_code || ""} ${journal.total}
+- **Total**: ${journal.currency_code || "INR"} ${journal.total}
 - **Notes**: ${journal.notes || "N/A"}
 
 **Line Items**:`;
@@ -1121,7 +1121,7 @@ Debits must equal credits for a valid journal entry.`;
 - **Journal ID**: \`${journal.journal_id}\`
 - **Date**: ${journal.journal_date}
 - **Entry Number**: ${journal.entry_number || "N/A"}
-- **Total**: ${journal.currency_code || ""} ${journal.total}
+- **Total**: ${journal.currency_code || "INR"} ${journal.total}
 
 Use this journal_id to add attachments or update the journal.`;
     }
@@ -1443,7 +1443,7 @@ Returns full expense details including account, vendor, and billable status.`,
 
 - **Expense ID**: \`${expense.expense_id}\`
 - **Date**: ${expense.date}
-- **Amount**: ${expense.currency_code || ""} ${expense.amount}
+- **Amount**: ${expense.currency_code || "INR"} ${expense.amount}
 - **Account**: ${expense.account_name || expense.account_id}
 - **Paid Through**: ${expense.paid_through_account_name || expense.paid_through_account_id || "N/A"}
 - **Vendor**: ${expense.vendor_name || "N/A"}
@@ -1508,7 +1508,7 @@ Use list_accounts to find valid account IDs.`,
 
 - **Expense ID**: \`${expense.expense_id}\`
 - **Date**: ${expense.date}
-- **Amount**: ${expense.currency_code || ""} ${expense.amount}
+- **Amount**: ${expense.currency_code || "INR"} ${expense.amount}
 
 Use this expense_id to add receipts.`;
     }
@@ -1620,7 +1620,8 @@ import { z as z6 } from "zod";
 var billLineItemSchema = z6.object({
   account_id: z6.string().describe("Account ID from chart of accounts"),
   description: z6.string().optional().describe("Description for this line item"),
-  amount: z6.number().positive().describe("Amount for this line item"),
+  rate: z6.number().positive().describe("Rate/amount for this line item"),
+  quantity: z6.number().positive().default(1).describe("Quantity (default 1)"),
   tax_id: z6.string().optional().describe("Tax ID if applicable")
 });
 function registerBillTools(server2) {
@@ -1668,8 +1669,8 @@ Returns bill details with vendor, amount, and due date.`,
    - Bill ID: \`${b.bill_id}\`
    - Date: ${b.date}
    - Due: ${b.due_date || "N/A"}
-   - Total: ${b.currency_code || ""} ${b.total}
-   - Balance: ${b.currency_code || ""} ${b.balance || 0}
+   - Total: ${b.currency_code || "INR"} ${b.total}
+   - Balance: ${b.currency_code || "INR"} ${b.balance || 0}
    - Status: ${b.status || "N/A"}`;
       }).join("\n\n");
       return `**Bills** (${bills.length} items)
@@ -1708,8 +1709,8 @@ Returns full bill details including line items and vendor info.`,
 - **Vendor**: ${bill.vendor_name || bill.vendor_id}
 - **Date**: ${bill.date}
 - **Due Date**: ${bill.due_date || "N/A"}
-- **Total**: ${bill.currency_code || ""} ${bill.total}
-- **Balance**: ${bill.currency_code || ""} ${bill.balance || 0}
+- **Total**: ${bill.currency_code || "INR"} ${bill.total}
+- **Balance**: ${bill.currency_code || "INR"} ${bill.balance || 0}
 - **Status**: ${bill.status || "N/A"}
 - **Reference**: ${bill.reference_number || "N/A"}
 - **Notes**: ${bill.notes || "N/A"}
@@ -1717,8 +1718,9 @@ Returns full bill details including line items and vendor info.`,
 **Line Items**:`;
       if (bill.line_items && bill.line_items.length > 0) {
         bill.line_items.forEach((item, i) => {
+          const lineTotal = item.item_total ?? item.amount ?? "N/A";
           details += `
-${i + 1}. ${item.account_name || item.account_id} - ${bill.currency_code || ""} ${item.amount}`;
+${i + 1}. ${item.account_name || item.account_id} - ${bill.currency_code || "INR"} ${lineTotal}`;
           if (item.description) details += `
    Description: ${item.description}`;
         });
@@ -1771,7 +1773,7 @@ Use list_accounts to find account_id values for line items.`,
 - **Bill ID**: \`${bill.bill_id}\`
 - **Bill Number**: ${bill.bill_number || "N/A"}
 - **Date**: ${bill.date}
-- **Total**: ${bill.currency_code || ""} ${bill.total}
+- **Total**: ${bill.currency_code || "INR"} ${bill.total}
 
 Use this bill_id to add attachments.`;
     }
@@ -1937,8 +1939,8 @@ Returns invoice details with customer, amount, and due date.`,
    - Invoice ID: \`${inv.invoice_id}\`
    - Date: ${inv.date}
    - Due: ${inv.due_date || "N/A"}
-   - Total: ${inv.currency_code || ""} ${inv.total}
-   - Balance: ${inv.currency_code || ""} ${inv.balance || 0}
+   - Total: ${inv.currency_code || "INR"} ${inv.total}
+   - Balance: ${inv.currency_code || "INR"} ${inv.balance || 0}
    - Status: ${inv.status || "N/A"}`;
       }).join("\n\n");
       return `**Invoices** (${invoices.length} items)
@@ -1980,8 +1982,8 @@ Returns full invoice details including line items and customer info.`,
 - **Customer**: ${invoice.customer_name || invoice.customer_id}
 - **Date**: ${invoice.date}
 - **Due Date**: ${invoice.due_date || "N/A"}
-- **Total**: ${invoice.currency_code || ""} ${invoice.total}
-- **Balance**: ${invoice.currency_code || ""} ${invoice.balance || 0}
+- **Total**: ${invoice.currency_code || "INR"} ${invoice.total}
+- **Balance**: ${invoice.currency_code || "INR"} ${invoice.balance || 0}
 - **Status**: ${invoice.status || "N/A"}
 - **Reference**: ${invoice.reference_number || "N/A"}
 - **Notes**: ${invoice.notes || "N/A"}`;
@@ -1990,8 +1992,9 @@ Returns full invoice details including line items and customer info.`,
 
 **Line Items**:`;
         invoice.line_items.forEach((item, i) => {
+          const lineTotal = item.item_total ?? item.amount ?? "N/A";
           details += `
-${i + 1}. ${item.name || item.description || "Item"} - ${invoice.currency_code || ""} ${item.amount}`;
+${i + 1}. ${item.name || item.description || "Item"} - ${invoice.currency_code || "INR"} ${lineTotal}`;
           if (item.quantity && item.rate) {
             details += ` (${item.quantity} x ${item.rate})`;
           }
@@ -2156,7 +2159,7 @@ Optionally provide estimate_id to convert an estimate into an invoice.`,
 - **Customer**: ${invoice.customer_name || invoice.customer_id}
 - **Date**: ${invoice.date}
 - **Due Date**: ${invoice.due_date || "N/A"}
-- **Total**: ${invoice.currency_code || ""} ${invoice.total}
+- **Total**: ${invoice.currency_code || "INR"} ${invoice.total}
 - **Status**: ${invoice.status || "draft"}`;
     }
   });
@@ -2209,7 +2212,7 @@ Invoice must be in draft or sent status to be updated.`,
 - **Customer**: ${invoice.customer_name || invoice.customer_id}
 - **Date**: ${invoice.date}
 - **Due Date**: ${invoice.due_date || "N/A"}
-- **Total**: ${invoice.currency_code || ""} ${invoice.total}
+- **Total**: ${invoice.currency_code || "INR"} ${invoice.total}
 - **Status**: ${invoice.status || "N/A"}`;
     }
   });
@@ -2613,7 +2616,7 @@ These are the accounts linked in Zoho Books, not live bank data.`,
         return "No bank accounts found.";
       }
       const formatted = accounts.map((acc, index) => {
-        const balance = acc.balance !== void 0 ? ` | Balance: ${acc.currency_code || ""} ${acc.balance}` : "";
+        const balance = acc.balance !== void 0 ? ` | Balance: ${acc.currency_code || "INR"} ${acc.balance}` : "";
         const digitsOnly = acc.account_number?.replace(/\D/g, "");
         const maskedAccount = digitsOnly && digitsOnly.length >= 4 ? `****${digitsOnly.slice(-4)}` : "N/A";
         return `${index + 1}. **${acc.account_name}** (${acc.account_type})
@@ -2668,7 +2671,7 @@ Returns full bank account details including routing number and balance.`,
 - **Account Number**: ${maskedAccount}
 - **Routing Number**: ${maskedRouting}
 - **Currency**: ${account.currency_code || "N/A"}
-- **Balance**: ${account.currency_code || ""} ${account.balance || 0}
+- **Balance**: ${account.currency_code || "INR"} ${account.balance || 0}
 - **Active**: ${account.is_active ? "Yes" : "No"}`;
     }
   });
@@ -2718,7 +2721,7 @@ These are transactions imported/entered in Zoho, not live bank feeds.`,
       }
       const formatted = transactions.map((tx, index) => {
         const amount = tx.debit_or_credit === "debit" ? `-${tx.amount}` : `+${tx.amount}`;
-        return `${index + 1}. **${tx.date}** - ${tx.currency_code || ""} ${amount}
+        return `${index + 1}. **${tx.date}** - ${tx.currency_code || "INR"} ${amount}
    - Transaction ID: \`${tx.transaction_id}\`
    - Type: ${tx.transaction_type}
    - Status: ${tx.status}
@@ -2776,7 +2779,7 @@ Returns payment details with customer, amount, and date.`,
         return "No customer payments found.";
       }
       const formatted = payments.map((p, index) => {
-        return `${index + 1}. **${p.date}** - ${p.currency_code || ""} ${p.amount}
+        return `${index + 1}. **${p.date}** - ${p.currency_code || "INR"} ${p.amount}
    - Payment ID: \`${p.payment_id}\`
    - Customer: ${p.customer_name || p.customer_id}
    - Mode: ${p.payment_mode || "N/A"}
@@ -2820,7 +2823,7 @@ Returns full payment details including customer, amount, and applied invoices.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Customer**: ${payment.customer_name || payment.customer_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 - **Payment Mode**: ${payment.payment_mode || "N/A"}
 - **Account**: ${payment.account_name || payment.account_id || "N/A"}
 - **Reference**: ${payment.reference_number || "N/A"}
@@ -2885,7 +2888,7 @@ Optionally apply to specific invoices.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Customer**: ${payment.customer_name || payment.customer_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 
 Use this payment_id to reference this payment.`;
     }
@@ -2963,7 +2966,7 @@ Returns payment details with vendor, amount, and date.`,
         return "No vendor payments found.";
       }
       const formatted = payments.map((p, index) => {
-        return `${index + 1}. **${p.date}** - ${p.currency_code || ""} ${p.amount}
+        return `${index + 1}. **${p.date}** - ${p.currency_code || "INR"} ${p.amount}
    - Payment ID: \`${p.payment_id}\`
    - Vendor: ${p.vendor_name || p.vendor_id}
    - Mode: ${p.payment_mode || "N/A"}
@@ -3008,7 +3011,7 @@ Returns full payment details including vendor, amount, and applied bills.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Vendor**: ${payment.vendor_name || payment.vendor_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 - **Payment Mode**: ${payment.payment_mode || "N/A"}
 - **Paid Through**: ${payment.paid_through_account_name || payment.paid_through_account_id || "N/A"}
 - **Reference**: ${payment.reference_number || "N/A"}
@@ -3073,7 +3076,7 @@ Optionally apply to specific bills.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Vendor**: ${payment.vendor_name || payment.vendor_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 
 Use this payment_id to reference this payment.`;
     }
@@ -3147,7 +3150,7 @@ Returns item details with name, rate, and type.`,
         return "No items found.";
       }
       const formatted = items.map((item, index) => {
-        return `${index + 1}. **${item.name}** - ${item.currency_code || ""} ${item.rate}
+        return `${index + 1}. **${item.name}** - ${item.currency_code || "INR"} ${item.rate}
    - Item ID: \`${item.item_id}\`
    - SKU: ${item.sku || "N/A"}
    - Type: ${item.product_type || "N/A"}
@@ -3190,8 +3193,8 @@ Returns full item details including rate, accounts, and tax info.`,
 
 - **Item ID**: \`${item.item_id}\`
 - **Name**: ${item.name}
-- **Rate**: ${item.currency_code || ""} ${item.rate}
-- **Purchase Rate**: ${item.purchase_rate !== void 0 ? `${item.currency_code || ""} ${item.purchase_rate}` : "N/A"}
+- **Rate**: ${item.currency_code || "INR"} ${item.rate}
+- **Purchase Rate**: ${item.purchase_rate !== void 0 ? `${item.currency_code || "INR"} ${item.purchase_rate}` : "N/A"}
 - **SKU**: ${item.sku || "N/A"}
 - **Type**: ${item.product_type || "N/A"}
 - **HSN/SAC**: ${item.hsn_or_sac || "N/A"}
@@ -3262,7 +3265,7 @@ Use list_taxes to find tax_id values.`,
 
 - **Item ID**: \`${item.item_id}\`
 - **Name**: ${item.name}
-- **Rate**: ${item.currency_code || ""} ${item.rate}
+- **Rate**: ${item.currency_code || "INR"} ${item.rate}
 - **Type**: ${item.product_type || "N/A"}
 
 Use this item_id to reference this item in invoices, estimates, and purchase orders.`;
@@ -3326,7 +3329,7 @@ Only provided fields will be updated.`,
 
 - **Item ID**: \`${item.item_id}\`
 - **Name**: ${item.name}
-- **Rate**: ${item.currency_code || ""} ${item.rate}
+- **Rate**: ${item.currency_code || "INR"} ${item.rate}
 - **Status**: ${item.status || "N/A"}`;
     }
   });
@@ -3419,7 +3422,7 @@ Returns estimate details with customer, total, and status.`,
    - Estimate ID: \`${e.estimate_id}\`
    - Date: ${e.date}
    - Expiry: ${e.expiry_date || "N/A"}
-   - Total: ${e.currency_code || ""} ${e.total}
+   - Total: ${e.currency_code || "INR"} ${e.total}
    - Status: ${e.status || "N/A"}`;
       }).join("\n\n");
       return `**Estimates** (${estimates.length} items)
@@ -3461,7 +3464,7 @@ Returns full estimate details including line items, terms, and notes.`,
 - **Customer**: ${estimate.customer_name || estimate.customer_id}
 - **Date**: ${estimate.date}
 - **Expiry Date**: ${estimate.expiry_date || "N/A"}
-- **Total**: ${estimate.currency_code || ""} ${estimate.total}
+- **Total**: ${estimate.currency_code || "INR"} ${estimate.total}
 - **Status**: ${estimate.status || "N/A"}
 - **Reference**: ${estimate.reference_number || "N/A"}
 - **Notes**: ${estimate.notes || "N/A"}
@@ -3471,7 +3474,7 @@ Returns full estimate details including line items, terms, and notes.`,
       if (estimate.line_items && estimate.line_items.length > 0) {
         estimate.line_items.forEach((item, i) => {
           details += `
-${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${estimate.currency_code || ""} ${item.rate || 0} = ${estimate.currency_code || ""} ${item.amount}`;
+${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${estimate.currency_code || "INR"} ${item.rate || 0} = ${estimate.currency_code || "INR"} ${item.item_total ?? item.amount ?? "N/A"}`;
           if (item.description) details += `
    Description: ${item.description}`;
           if (item.discount) details += `
@@ -3532,7 +3535,7 @@ Use list_items to find item_id values for line items.`,
 - **Estimate ID**: \`${estimate.estimate_id}\`
 - **Estimate Number**: ${estimate.estimate_number || "N/A"}
 - **Date**: ${estimate.date}
-- **Total**: ${estimate.currency_code || ""} ${estimate.total}
+- **Total**: ${estimate.currency_code || "INR"} ${estimate.total}
 
 Use this estimate_id to update, send, or mark as accepted.`;
     }
@@ -3586,7 +3589,7 @@ Only provided fields will be updated.`,
 
 - **Estimate ID**: \`${estimate.estimate_id}\`
 - **Estimate Number**: ${estimate.estimate_number || "N/A"}
-- **Total**: ${estimate.currency_code || ""} ${estimate.total}
+- **Total**: ${estimate.currency_code || "INR"} ${estimate.total}
 - **Status**: ${estimate.status || "N/A"}`;
     }
   });
@@ -3707,7 +3710,7 @@ Returns purchase order details with vendor, total, and status.`,
    - PO ID: \`${po.purchaseorder_id}\`
    - Date: ${po.date}
    - Delivery Date: ${po.delivery_date || "N/A"}
-   - Total: ${po.currency_code || ""} ${po.total}
+   - Total: ${po.currency_code || "INR"} ${po.total}
    - Status: ${po.status || "N/A"}`;
       }).join("\n\n");
       return `**Purchase Orders** (${orders.length} items)
@@ -3749,7 +3752,7 @@ Returns full purchase order details including line items and vendor info.`,
 - **Vendor**: ${po.vendor_name || po.vendor_id}
 - **Date**: ${po.date}
 - **Delivery Date**: ${po.delivery_date || "N/A"}
-- **Total**: ${po.currency_code || ""} ${po.total}
+- **Total**: ${po.currency_code || "INR"} ${po.total}
 - **Status**: ${po.status || "N/A"}
 - **Reference**: ${po.reference_number || "N/A"}
 - **Notes**: ${po.notes || "N/A"}
@@ -3758,7 +3761,7 @@ Returns full purchase order details including line items and vendor info.`,
       if (po.line_items && po.line_items.length > 0) {
         po.line_items.forEach((item, i) => {
           details += `
-${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${po.currency_code || ""} ${item.rate || 0} = ${po.currency_code || ""} ${item.amount}`;
+${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${po.currency_code || "INR"} ${item.rate || 0} = ${po.currency_code || "INR"} ${item.item_total ?? item.amount ?? "N/A"}`;
           if (item.description) details += `
    Description: ${item.description}`;
         });
@@ -3815,7 +3818,7 @@ Use list_items to find item_id values for line items.`,
 - **PO ID**: \`${po.purchaseorder_id}\`
 - **PO Number**: ${po.purchaseorder_number || "N/A"}
 - **Date**: ${po.date}
-- **Total**: ${po.currency_code || ""} ${po.total}
+- **Total**: ${po.currency_code || "INR"} ${po.total}
 
 Use this purchaseorder_id to update, open, or cancel this purchase order.`;
     }
@@ -3867,7 +3870,7 @@ Only provided fields will be updated.`,
 
 - **PO ID**: \`${po.purchaseorder_id}\`
 - **PO Number**: ${po.purchaseorder_number || "N/A"}
-- **Total**: ${po.currency_code || ""} ${po.total}
+- **Total**: ${po.currency_code || "INR"} ${po.total}
 - **Status**: ${po.status || "N/A"}`;
     }
   });
@@ -4132,8 +4135,8 @@ Returns credit note number, customer, total, balance, and status.`,
         return `${index + 1}. **${cn.creditnote_number || "No number"}** - ${cn.customer_name || "Unknown customer"}
    - Credit Note ID: \`${cn.creditnote_id}\`
    - Date: ${cn.date}
-   - Total: ${cn.currency_code || ""} ${cn.total}
-   - Balance: ${cn.currency_code || ""} ${cn.balance || 0}
+   - Total: ${cn.currency_code || "INR"} ${cn.total}
+   - Balance: ${cn.currency_code || "INR"} ${cn.balance || 0}
    - Status: ${cn.status || "N/A"}`;
       }).join("\n\n");
       return `**Credit Notes** (${creditnotes.length} items)
@@ -4171,8 +4174,8 @@ Returns full details including line items and remaining balance.`,
 - **Number**: ${cn.creditnote_number || "N/A"}
 - **Customer**: ${cn.customer_name || cn.customer_id}
 - **Date**: ${cn.date}
-- **Total**: ${cn.currency_code || ""} ${cn.total}
-- **Balance**: ${cn.currency_code || ""} ${cn.balance || 0}
+- **Total**: ${cn.currency_code || "INR"} ${cn.total}
+- **Balance**: ${cn.currency_code || "INR"} ${cn.balance || 0}
 - **Status**: ${cn.status || "N/A"}
 - **Reference**: ${cn.reference_number || "N/A"}
 - **Notes**: ${cn.notes || "N/A"}
@@ -4181,7 +4184,7 @@ Returns full details including line items and remaining balance.`,
       if (cn.line_items && cn.line_items.length > 0) {
         cn.line_items.forEach((item, i) => {
           details += `
-${i + 1}. ${item.name || item.item_id || "Item"} - ${cn.currency_code || ""} ${item.amount}`;
+${i + 1}. ${item.name || item.item_id || "Item"} - ${cn.currency_code || "INR"} ${item.item_total ?? item.amount ?? "N/A"}`;
           if (item.description) details += `
    Description: ${item.description}`;
           if (item.quantity && item.rate) details += `
@@ -4234,7 +4237,7 @@ Credit notes can later be applied to outstanding invoices.`,
 - **Credit Note ID**: \`${cn.creditnote_id}\`
 - **Number**: ${cn.creditnote_number || "N/A"}
 - **Date**: ${cn.date}
-- **Total**: ${cn.currency_code || ""} ${cn.total}
+- **Total**: ${cn.currency_code || "INR"} ${cn.total}
 
 Use apply_credit_to_invoice to apply this credit against outstanding invoices.`;
     }
@@ -4392,7 +4395,7 @@ Returns recurrence name, customer, total, frequency, and status.`,
    - Recurring Invoice ID: \`${ri.recurring_invoice_id}\`
    - Frequency: Every ${ri.repeat_every || 1} ${ri.recurrence_frequency || "N/A"}
    - Next Invoice: ${ri.next_invoice_date || "N/A"}
-   - Total: ${ri.currency_code || ""} ${ri.total}
+   - Total: ${ri.currency_code || "INR"} ${ri.total}
    - Status: ${ri.status || "N/A"}`;
       }).join("\n\n");
       return `**Recurring Invoices** (${invoices.length} items)
@@ -4436,14 +4439,14 @@ Returns recurrence name, frequency, next invoice date, customer, total, and stat
 - **Start Date**: ${ri.start_date || "N/A"}
 - **End Date**: ${ri.end_date || "N/A"}
 - **Next Invoice Date**: ${ri.next_invoice_date || "N/A"}
-- **Total**: ${ri.currency_code || ""} ${ri.total}
+- **Total**: ${ri.currency_code || "INR"} ${ri.total}
 - **Status**: ${ri.status || "N/A"}
 
 **Line Items**:`;
       if (ri.line_items && ri.line_items.length > 0) {
         ri.line_items.forEach((item, i) => {
           details += `
-${i + 1}. ${item.name || item.item_id || "Item"} - ${ri.currency_code || ""} ${item.amount}`;
+${i + 1}. ${item.name || item.item_id || "Item"} - ${ri.currency_code || "INR"} ${item.item_total ?? item.amount ?? "N/A"}`;
           if (item.description) details += `
    Description: ${item.description}`;
           if (item.quantity && item.rate) details += `
@@ -4505,7 +4508,7 @@ Specify the recurrence frequency and interval to control how often invoices are 
 - **Recurrence Name**: ${ri.recurrence_name}
 - **Frequency**: Every ${ri.repeat_every || 1} ${ri.recurrence_frequency || "N/A"}
 - **Start Date**: ${ri.start_date || "N/A"}
-- **Total**: ${ri.currency_code || ""} ${ri.total}
+- **Total**: ${ri.currency_code || "INR"} ${ri.total}
 - **Status**: ${ri.status || "N/A"}`;
     }
   });

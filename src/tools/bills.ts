@@ -12,7 +12,8 @@ import { optionalOrganizationIdSchema } from "../utils/validation.js"
 const billLineItemSchema = z.object({
   account_id: z.string().describe("Account ID from chart of accounts"),
   description: z.string().optional().describe("Description for this line item"),
-  amount: z.number().positive().describe("Amount for this line item"),
+  rate: z.number().positive().describe("Rate/amount for this line item"),
+  quantity: z.number().positive().default(1).describe("Quantity (default 1)"),
   tax_id: z.string().optional().describe("Tax ID if applicable"),
 })
 
@@ -74,8 +75,8 @@ Returns bill details with vendor, amount, and due date.`,
    - Bill ID: \`${b.bill_id}\`
    - Date: ${b.date}
    - Due: ${b.due_date || "N/A"}
-   - Total: ${b.currency_code || ""} ${b.total}
-   - Balance: ${b.currency_code || ""} ${b.balance || 0}
+   - Total: ${b.currency_code || "INR"} ${b.total}
+   - Balance: ${b.currency_code || "INR"} ${b.balance || 0}
    - Status: ${b.status || "N/A"}`
         })
         .join("\n\n")
@@ -120,8 +121,8 @@ Returns full bill details including line items and vendor info.`,
 - **Vendor**: ${bill.vendor_name || bill.vendor_id}
 - **Date**: ${bill.date}
 - **Due Date**: ${bill.due_date || "N/A"}
-- **Total**: ${bill.currency_code || ""} ${bill.total}
-- **Balance**: ${bill.currency_code || ""} ${bill.balance || 0}
+- **Total**: ${bill.currency_code || "INR"} ${bill.total}
+- **Balance**: ${bill.currency_code || "INR"} ${bill.balance || 0}
 - **Status**: ${bill.status || "N/A"}
 - **Reference**: ${bill.reference_number || "N/A"}
 - **Notes**: ${bill.notes || "N/A"}
@@ -130,7 +131,8 @@ Returns full bill details including line items and vendor info.`,
 
       if (bill.line_items && bill.line_items.length > 0) {
         bill.line_items.forEach((item: BillLineItem, i: number) => {
-          details += `\n${i + 1}. ${item.account_name || item.account_id} - ${bill.currency_code || ""} ${item.amount}`
+          const lineTotal = (item as Record<string, unknown>).item_total ?? item.amount ?? "N/A"
+          details += `\n${i + 1}. ${item.account_name || item.account_id} - ${bill.currency_code || "INR"} ${lineTotal}`
           if (item.description) details += `\n   Description: ${item.description}`
         })
       }
@@ -191,7 +193,7 @@ Use list_accounts to find account_id values for line items.`,
 - **Bill ID**: \`${bill.bill_id}\`
 - **Bill Number**: ${bill.bill_number || "N/A"}
 - **Date**: ${bill.date}
-- **Total**: ${bill.currency_code || ""} ${bill.total}
+- **Total**: ${bill.currency_code || "INR"} ${bill.total}
 
 Use this bill_id to add attachments.`
     },

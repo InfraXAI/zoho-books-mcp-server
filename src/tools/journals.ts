@@ -83,7 +83,7 @@ Use date filters to narrow down results.`,
         .map((j, index) => {
           return `${index + 1}. **${j.journal_date}** - ${j.reference_number || j.entry_number || "No ref"}
    - Journal ID: \`${j.journal_id}\`
-   - Total: ${j.currency_code || ""} ${j.total}
+   - Total: ${j.currency_code || "INR"} ${j.total}
    - Notes: ${j.notes || "N/A"}`
         })
         .join("\n\n")
@@ -130,7 +130,7 @@ Returns full journal details including all line items.`,
 - **Date**: ${journal.journal_date}
 - **Entry Number**: ${journal.entry_number || "N/A"}
 - **Reference**: ${journal.reference_number || "N/A"}
-- **Total**: ${journal.currency_code || ""} ${journal.total}
+- **Total**: ${journal.currency_code || "INR"} ${journal.total}
 - **Notes**: ${journal.notes || "N/A"}
 
 **Line Items**:`
@@ -221,7 +221,7 @@ Debits must equal credits for a valid journal entry.`
 - **Journal ID**: \`${journal.journal_id}\`
 - **Date**: ${journal.journal_date}
 - **Entry Number**: ${journal.entry_number || "N/A"}
-- **Total**: ${journal.currency_code || ""} ${journal.total}
+- **Total**: ${journal.currency_code || "INR"} ${journal.total}
 
 Use this journal_id to add attachments or update the journal.`
     },

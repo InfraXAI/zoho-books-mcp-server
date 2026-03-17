@@ -59,7 +59,7 @@ Returns payment details with vendor, amount, and date.`,
 
       const formatted = payments
         .map((p, index) => {
-          return `${index + 1}. **${p.date}** - ${p.currency_code || ""} ${p.amount}
+          return `${index + 1}. **${p.date}** - ${p.currency_code || "INR"} ${p.amount}
    - Payment ID: \`${p.payment_id}\`
    - Vendor: ${p.vendor_name || p.vendor_id}
    - Mode: ${p.payment_mode || "N/A"}
@@ -110,7 +110,7 @@ Returns full payment details including vendor, amount, and applied bills.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Vendor**: ${payment.vendor_name || payment.vendor_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 - **Payment Mode**: ${payment.payment_mode || "N/A"}
 - **Paid Through**: ${payment.paid_through_account_name || payment.paid_through_account_id || "N/A"}
 - **Reference**: ${payment.reference_number || "N/A"}
@@ -189,7 +189,7 @@ Optionally apply to specific bills.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Vendor**: ${payment.vendor_name || payment.vendor_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 
 Use this payment_id to reference this payment.`
     },

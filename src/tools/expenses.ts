@@ -124,7 +124,7 @@ Returns full expense details including account, vendor, and billable status.`,
 
 - **Expense ID**: \`${expense.expense_id}\`
 - **Date**: ${expense.date}
-- **Amount**: ${expense.currency_code || ""} ${expense.amount}
+- **Amount**: ${expense.currency_code || "INR"} ${expense.amount}
 - **Account**: ${expense.account_name || expense.account_id}
 - **Paid Through**: ${expense.paid_through_account_name || expense.paid_through_account_id || "N/A"}
 - **Vendor**: ${expense.vendor_name || "N/A"}
@@ -197,7 +197,7 @@ Use list_accounts to find valid account IDs.`,
 
 - **Expense ID**: \`${expense.expense_id}\`
 - **Date**: ${expense.date}
-- **Amount**: ${expense.currency_code || ""} ${expense.amount}
+- **Amount**: ${expense.currency_code || "INR"} ${expense.amount}
 
 Use this expense_id to add receipts.`
     },

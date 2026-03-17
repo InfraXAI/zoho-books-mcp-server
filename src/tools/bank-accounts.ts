@@ -61,7 +61,7 @@ These are the accounts linked in Zoho Books, not live bank data.`,
       const formatted = accounts
         .map((acc, index) => {
           const balance =
-            acc.balance !== undefined ? ` | Balance: ${acc.currency_code || ""} ${acc.balance}` : ""
+            acc.balance !== undefined ? ` | Balance: ${acc.currency_code || "INR"} ${acc.balance}` : ""
           // Security: Sanitize account number (remove non-digits) before masking
           const digitsOnly = acc.account_number?.replace(/\D/g, "")
           const maskedAccount =
@@ -128,7 +128,7 @@ Returns full bank account details including routing number and balance.`,
 - **Account Number**: ${maskedAccount}
 - **Routing Number**: ${maskedRouting}
 - **Currency**: ${account.currency_code || "N/A"}
-- **Balance**: ${account.currency_code || ""} ${account.balance || 0}
+- **Balance**: ${account.currency_code || "INR"} ${account.balance || 0}
 - **Active**: ${account.is_active ? "Yes" : "No"}`
     },
   })
@@ -186,7 +186,7 @@ These are transactions imported/entered in Zoho, not live bank feeds.`,
       const formatted = transactions
         .map((tx, index) => {
           const amount = tx.debit_or_credit === "debit" ? `-${tx.amount}` : `+${tx.amount}`
-          return `${index + 1}. **${tx.date}** - ${tx.currency_code || ""} ${amount}
+          return `${index + 1}. **${tx.date}** - ${tx.currency_code || "INR"} ${amount}
    - Transaction ID: \`${tx.transaction_id}\`
    - Type: ${tx.transaction_type}
    - Status: ${tx.status}

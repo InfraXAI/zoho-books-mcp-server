@@ -79,7 +79,7 @@ Returns estimate details with customer, total, and status.`,
    - Estimate ID: \`${e.estimate_id}\`
    - Date: ${e.date}
    - Expiry: ${e.expiry_date || "N/A"}
-   - Total: ${e.currency_code || ""} ${e.total}
+   - Total: ${e.currency_code || "INR"} ${e.total}
    - Status: ${e.status || "N/A"}`
         })
         .join("\n\n")
@@ -127,7 +127,7 @@ Returns full estimate details including line items, terms, and notes.`,
 - **Customer**: ${estimate.customer_name || estimate.customer_id}
 - **Date**: ${estimate.date}
 - **Expiry Date**: ${estimate.expiry_date || "N/A"}
-- **Total**: ${estimate.currency_code || ""} ${estimate.total}
+- **Total**: ${estimate.currency_code || "INR"} ${estimate.total}
 - **Status**: ${estimate.status || "N/A"}
 - **Reference**: ${estimate.reference_number || "N/A"}
 - **Notes**: ${estimate.notes || "N/A"}
@@ -137,7 +137,7 @@ Returns full estimate details including line items, terms, and notes.`,
 
       if (estimate.line_items && estimate.line_items.length > 0) {
         estimate.line_items.forEach((item: EstimateLineItem, i: number) => {
-          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${estimate.currency_code || ""} ${item.rate || 0} = ${estimate.currency_code || ""} ${item.amount}`
+          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - Qty: ${item.quantity || 1} x ${estimate.currency_code || "INR"} ${item.rate || 0} = ${estimate.currency_code || "INR"} ${(item as Record<string, unknown>).item_total ?? item.amount ?? "N/A"}`
           if (item.description) details += `\n   Description: ${item.description}`
           if (item.discount) details += `\n   Discount: ${item.discount}%`
         })
@@ -205,7 +205,7 @@ Use list_items to find item_id values for line items.`,
 - **Estimate ID**: \`${estimate.estimate_id}\`
 - **Estimate Number**: ${estimate.estimate_number || "N/A"}
 - **Date**: ${estimate.date}
-- **Total**: ${estimate.currency_code || ""} ${estimate.total}
+- **Total**: ${estimate.currency_code || "INR"} ${estimate.total}
 
 Use this estimate_id to update, send, or mark as accepted.`
     },
@@ -267,7 +267,7 @@ Only provided fields will be updated.`,
 
 - **Estimate ID**: \`${estimate.estimate_id}\`
 - **Estimate Number**: ${estimate.estimate_number || "N/A"}
-- **Total**: ${estimate.currency_code || ""} ${estimate.total}
+- **Total**: ${estimate.currency_code || "INR"} ${estimate.total}
 - **Status**: ${estimate.status || "N/A"}`
     },
   })

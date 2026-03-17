@@ -55,7 +55,7 @@ Returns item details with name, rate, and type.`,
 
       const formatted = items
         .map((item, index) => {
-          return `${index + 1}. **${item.name}** - ${item.currency_code || ""} ${item.rate}
+          return `${index + 1}. **${item.name}** - ${item.currency_code || "INR"} ${item.rate}
    - Item ID: \`${item.item_id}\`
    - SKU: ${item.sku || "N/A"}
    - Type: ${item.product_type || "N/A"}
@@ -104,8 +104,8 @@ Returns full item details including rate, accounts, and tax info.`,
 
 - **Item ID**: \`${item.item_id}\`
 - **Name**: ${item.name}
-- **Rate**: ${item.currency_code || ""} ${item.rate}
-- **Purchase Rate**: ${item.purchase_rate !== undefined ? `${item.currency_code || ""} ${item.purchase_rate}` : "N/A"}
+- **Rate**: ${item.currency_code || "INR"} ${item.rate}
+- **Purchase Rate**: ${item.purchase_rate !== undefined ? `${item.currency_code || "INR"} ${item.purchase_rate}` : "N/A"}
 - **SKU**: ${item.sku || "N/A"}
 - **Type**: ${item.product_type || "N/A"}
 - **HSN/SAC**: ${item.hsn_or_sac || "N/A"}
@@ -184,7 +184,7 @@ Use list_taxes to find tax_id values.`,
 
 - **Item ID**: \`${item.item_id}\`
 - **Name**: ${item.name}
-- **Rate**: ${item.currency_code || ""} ${item.rate}
+- **Rate**: ${item.currency_code || "INR"} ${item.rate}
 - **Type**: ${item.product_type || "N/A"}
 
 Use this item_id to reference this item in invoices, estimates, and purchase orders.`
@@ -256,7 +256,7 @@ Only provided fields will be updated.`,
 
 - **Item ID**: \`${item.item_id}\`
 - **Name**: ${item.name}
-- **Rate**: ${item.currency_code || ""} ${item.rate}
+- **Rate**: ${item.currency_code || "INR"} ${item.rate}
 - **Status**: ${item.status || "N/A"}`
     },
   })

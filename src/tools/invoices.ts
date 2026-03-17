@@ -80,8 +80,8 @@ Returns invoice details with customer, amount, and due date.`,
    - Invoice ID: \`${inv.invoice_id}\`
    - Date: ${inv.date}
    - Due: ${inv.due_date || "N/A"}
-   - Total: ${inv.currency_code || ""} ${inv.total}
-   - Balance: ${inv.currency_code || ""} ${inv.balance || 0}
+   - Total: ${inv.currency_code || "INR"} ${inv.total}
+   - Balance: ${inv.currency_code || "INR"} ${inv.balance || 0}
    - Status: ${inv.status || "N/A"}`
         })
         .join("\n\n")
@@ -129,8 +129,8 @@ Returns full invoice details including line items and customer info.`,
 - **Customer**: ${invoice.customer_name || invoice.customer_id}
 - **Date**: ${invoice.date}
 - **Due Date**: ${invoice.due_date || "N/A"}
-- **Total**: ${invoice.currency_code || ""} ${invoice.total}
-- **Balance**: ${invoice.currency_code || ""} ${invoice.balance || 0}
+- **Total**: ${invoice.currency_code || "INR"} ${invoice.total}
+- **Balance**: ${invoice.currency_code || "INR"} ${invoice.balance || 0}
 - **Status**: ${invoice.status || "N/A"}
 - **Reference**: ${invoice.reference_number || "N/A"}
 - **Notes**: ${invoice.notes || "N/A"}`
@@ -138,7 +138,8 @@ Returns full invoice details including line items and customer info.`,
       if (invoice.line_items && invoice.line_items.length > 0) {
         details += `\n\n**Line Items**:`
         invoice.line_items.forEach((item, i) => {
-          details += `\n${i + 1}. ${item.name || item.description || "Item"} - ${invoice.currency_code || ""} ${item.amount}`
+          const lineTotal = (item as Record<string, unknown>).item_total ?? item.amount ?? "N/A"
+          details += `\n${i + 1}. ${item.name || item.description || "Item"} - ${invoice.currency_code || "INR"} ${lineTotal}`
           if (item.quantity && item.rate) {
             details += ` (${item.quantity} x ${item.rate})`
           }
@@ -321,7 +322,7 @@ Optionally provide estimate_id to convert an estimate into an invoice.`,
 - **Customer**: ${invoice.customer_name || invoice.customer_id}
 - **Date**: ${invoice.date}
 - **Due Date**: ${invoice.due_date || "N/A"}
-- **Total**: ${invoice.currency_code || ""} ${invoice.total}
+- **Total**: ${invoice.currency_code || "INR"} ${invoice.total}
 - **Status**: ${invoice.status || "draft"}`
     },
   })
@@ -381,7 +382,7 @@ Invoice must be in draft or sent status to be updated.`,
 - **Customer**: ${invoice.customer_name || invoice.customer_id}
 - **Date**: ${invoice.date}
 - **Due Date**: ${invoice.due_date || "N/A"}
-- **Total**: ${invoice.currency_code || ""} ${invoice.total}
+- **Total**: ${invoice.currency_code || "INR"} ${invoice.total}
 - **Status**: ${invoice.status || "N/A"}`
     },
   })

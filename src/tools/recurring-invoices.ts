@@ -71,7 +71,7 @@ Returns recurrence name, customer, total, frequency, and status.`,
    - Recurring Invoice ID: \`${ri.recurring_invoice_id}\`
    - Frequency: Every ${ri.repeat_every || 1} ${ri.recurrence_frequency || "N/A"}
    - Next Invoice: ${ri.next_invoice_date || "N/A"}
-   - Total: ${ri.currency_code || ""} ${ri.total}
+   - Total: ${ri.currency_code || "INR"} ${ri.total}
    - Status: ${ri.status || "N/A"}`
         })
         .join("\n\n")
@@ -121,14 +121,14 @@ Returns recurrence name, frequency, next invoice date, customer, total, and stat
 - **Start Date**: ${ri.start_date || "N/A"}
 - **End Date**: ${ri.end_date || "N/A"}
 - **Next Invoice Date**: ${ri.next_invoice_date || "N/A"}
-- **Total**: ${ri.currency_code || ""} ${ri.total}
+- **Total**: ${ri.currency_code || "INR"} ${ri.total}
 - **Status**: ${ri.status || "N/A"}
 
 **Line Items**:`
 
       if (ri.line_items && ri.line_items.length > 0) {
         ri.line_items.forEach((item, i) => {
-          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - ${ri.currency_code || ""} ${item.amount}`
+          details += `\n${i + 1}. ${item.name || item.item_id || "Item"} - ${ri.currency_code || "INR"} ${(item as Record<string, unknown>).item_total ?? item.amount ?? "N/A"}`
           if (item.description) details += `\n   Description: ${item.description}`
           if (item.quantity && item.rate) details += `\n   ${item.quantity} x ${item.rate}`
         })
@@ -197,7 +197,7 @@ Specify the recurrence frequency and interval to control how often invoices are 
 - **Recurrence Name**: ${ri.recurrence_name}
 - **Frequency**: Every ${ri.repeat_every || 1} ${ri.recurrence_frequency || "N/A"}
 - **Start Date**: ${ri.start_date || "N/A"}
-- **Total**: ${ri.currency_code || ""} ${ri.total}
+- **Total**: ${ri.currency_code || "INR"} ${ri.total}
 - **Status**: ${ri.status || "N/A"}`
     },
   })

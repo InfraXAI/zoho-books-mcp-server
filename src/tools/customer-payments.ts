@@ -59,7 +59,7 @@ Returns payment details with customer, amount, and date.`,
 
       const formatted = payments
         .map((p, index) => {
-          return `${index + 1}. **${p.date}** - ${p.currency_code || ""} ${p.amount}
+          return `${index + 1}. **${p.date}** - ${p.currency_code || "INR"} ${p.amount}
    - Payment ID: \`${p.payment_id}\`
    - Customer: ${p.customer_name || p.customer_id}
    - Mode: ${p.payment_mode || "N/A"}
@@ -109,7 +109,7 @@ Returns full payment details including customer, amount, and applied invoices.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Customer**: ${payment.customer_name || payment.customer_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 - **Payment Mode**: ${payment.payment_mode || "N/A"}
 - **Account**: ${payment.account_name || payment.account_id || "N/A"}
 - **Reference**: ${payment.reference_number || "N/A"}
@@ -188,7 +188,7 @@ Optionally apply to specific invoices.`,
 - **Payment ID**: \`${payment.payment_id}\`
 - **Customer**: ${payment.customer_name || payment.customer_id}
 - **Date**: ${payment.date}
-- **Amount**: ${payment.currency_code || ""} ${payment.amount}
+- **Amount**: ${payment.currency_code || "INR"} ${payment.amount}
 
 Use this payment_id to reference this payment.`
     },
