@@ -1,3 +1,17 @@
+import {
+  MAX_FILE_SIZE_BYTES,
+  REQUEST_TIMEOUT_MS,
+  ZohoAuthError,
+  autoDiscoverOrganizations,
+  cacheOrgName,
+  getAccessToken,
+  getEffectiveOrgId,
+  getOrgAliases,
+  getZohoConfig,
+  resolveOrgAlias,
+  setSessionOrganization
+} from "./chunk-56R5MHE5.js";
+
 // src/index.ts
 import { FastMCP } from "fastmcp";
 
@@ -7,161 +21,6 @@ import { z as z2 } from "zod";
 // src/api/client.ts
 import * as fs from "fs";
 import * as path2 from "path";
-
-// src/config.ts
-var MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-var REQUEST_TIMEOUT_MS = 3e4;
-function getZohoConfig() {
-  const clientId = process.env.ZOHO_CLIENT_ID || "";
-  const clientSecret = process.env.ZOHO_CLIENT_SECRET || "";
-  const refreshToken = process.env.ZOHO_REFRESH_TOKEN || "";
-  const apiUrl = process.env.ZOHO_API_URL || "https://www.zohoapis.in/books/v3";
-  const organizationId = process.env.ZOHO_ORGANIZATION_ID || "";
-  const orgAliases = [];
-  const aliasStr = process.env.ZOHO_ORG_ALIASES || "";
-  if (aliasStr) {
-    aliasStr.split(",").forEach((pair) => {
-      const [alias, orgId] = pair.trim().split(":");
-      if (alias && orgId) {
-        orgAliases.push({ alias: alias.trim().toLowerCase(), orgId: orgId.trim() });
-      }
-    });
-  }
-  return {
-    clientId,
-    clientSecret,
-    refreshToken,
-    apiUrl,
-    organizationId,
-    orgAliases
-  };
-}
-function getServerConfig() {
-  return {
-    port: parseInt(process.env.PORT || "8004", 10),
-    host: process.env.HOST || "0.0.0.0"
-  };
-}
-function validateZohoConfig(config) {
-  if (!config.clientId) {
-    return { valid: false, error: "ZOHO_CLIENT_ID is not configured" };
-  }
-  if (!config.clientSecret) {
-    return { valid: false, error: "ZOHO_CLIENT_SECRET is not configured" };
-  }
-  if (!config.refreshToken) {
-    return { valid: false, error: "ZOHO_REFRESH_TOKEN is not configured" };
-  }
-  if (!config.apiUrl.startsWith("https://")) {
-    return { valid: false, error: "ZOHO_API_URL must use HTTPS" };
-  }
-  return { valid: true };
-}
-var sessionOrgId = null;
-var orgNameCache = /* @__PURE__ */ new Map();
-function setSessionOrganization(orgId, orgName) {
-  sessionOrgId = orgId;
-  if (orgName) {
-    orgNameCache.set(orgId, orgName);
-  }
-}
-function getEffectiveOrgId() {
-  return sessionOrgId || getZohoConfig().organizationId;
-}
-function cacheOrgName(orgId, name) {
-  orgNameCache.set(orgId, name);
-}
-function resolveOrgAlias(input) {
-  const config = getZohoConfig();
-  const lower = input.toLowerCase().trim();
-  const match = config.orgAliases.find((a) => a.alias === lower);
-  if (match) return match.orgId;
-  return input;
-}
-function getOrgAliases() {
-  return getZohoConfig().orgAliases;
-}
-function getZohoOAuthUrl(apiUrl) {
-  if (apiUrl.includes("zohoapis.eu")) {
-    return "https://accounts.zoho.eu/oauth/v2/token";
-  }
-  if (apiUrl.includes("zohoapis.in")) {
-    return "https://accounts.zoho.in/oauth/v2/token";
-  }
-  if (apiUrl.includes("zohoapis.com.au")) {
-    return "https://accounts.zoho.com.au/oauth/v2/token";
-  }
-  return "https://accounts.zoho.com/oauth/v2/token";
-}
-
-// src/auth/oauth.ts
-var tokenState = null;
-var TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1e3;
-var ZohoAuthError = class extends Error {
-  constructor(message, code, statusCode) {
-    super(message);
-    this.code = code;
-    this.statusCode = statusCode;
-    this.name = "ZohoAuthError";
-  }
-};
-async function getAccessToken() {
-  const config = getZohoConfig();
-  const validation = validateZohoConfig(config);
-  if (!validation.valid) {
-    throw new ZohoAuthError(
-      `Zoho OAuth not configured: ${validation.error}. Set ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, and ZOHO_REFRESH_TOKEN.`,
-      "OAUTH_NOT_CONFIGURED"
-    );
-  }
-  if (tokenState && Date.now() < tokenState.expiresAt - TOKEN_EXPIRY_BUFFER_MS) {
-    return tokenState.accessToken;
-  }
-  return refreshAccessToken(config);
-}
-async function refreshAccessToken(config) {
-  const oauthUrl = getZohoOAuthUrl(config.apiUrl);
-  try {
-    const response = await fetch(oauthUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        refresh_token: config.refreshToken
-      })
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      const errorMessage = data.error_description || data.error || "Unknown error";
-      throw new ZohoAuthError(
-        `Failed to refresh token: ${errorMessage}`,
-        data.error,
-        response.status
-      );
-    }
-    if (!data.access_token) {
-      throw new ZohoAuthError("No access token in response", "NO_ACCESS_TOKEN");
-    }
-    const expiresIn = data.expires_in || 3600;
-    tokenState = {
-      accessToken: data.access_token,
-      expiresAt: Date.now() + expiresIn * 1e3
-    };
-    return tokenState.accessToken;
-  } catch (error) {
-    if (error instanceof ZohoAuthError) {
-      throw error;
-    }
-    throw new ZohoAuthError(
-      `Failed to refresh token: ${error instanceof Error ? error.message : String(error)}`,
-      "REFRESH_FAILED"
-    );
-  }
-}
 
 // src/utils/mime-types.ts
 import * as path from "path";
@@ -445,6 +304,7 @@ function resolveOrganizationId(organizationId) {
 }
 async function zohoRequest(method, endpoint, organizationId, body, queryParams) {
   const config = getZohoConfig();
+  await autoDiscoverOrganizations();
   const orgIdResult = resolveOrganizationId(organizationId);
   if ("error" in orgIdResult) {
     return {
@@ -712,6 +572,7 @@ Use switch_organization to change the active organization.`,
       openWorldHint: true
     },
     execute: async () => {
+      await autoDiscoverOrganizations();
       const result = await zohoListOrganizations();
       if (!result.ok) {
         return result.errorMessage || "Failed to list organizations";
@@ -799,6 +660,7 @@ Use list_organizations to see available orgs and aliases.`,
       openWorldHint: true
     },
     execute: async (args) => {
+      await autoDiscoverOrganizations();
       const orgId = resolveOrgAlias(args.organization_id);
       const result = await zohoGet(
         `/organizations/${orgId}`,
@@ -4805,6 +4667,5 @@ registerRecurringInvoiceTools(server);
 var src_default = server;
 
 export {
-  getServerConfig,
   src_default
 };

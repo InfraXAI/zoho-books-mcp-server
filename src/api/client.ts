@@ -5,7 +5,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { getAccessToken, ZohoAuthError } from "../auth/oauth.js"
-import { getZohoConfig, getEffectiveOrgId, resolveOrgAlias, MAX_FILE_SIZE_BYTES, REQUEST_TIMEOUT_MS } from "../config.js"
+import { getZohoConfig, getEffectiveOrgId, resolveOrgAlias, autoDiscoverOrganizations, MAX_FILE_SIZE_BYTES, REQUEST_TIMEOUT_MS } from "../config.js"
 import { getMimeType, validateAttachment } from "../utils/mime-types.js"
 import { parseZohoResponse, type ParsedResponse } from "../utils/response-parser.js"
 
@@ -155,7 +155,10 @@ export async function zohoRequest<T>(
 ): Promise<ParsedResponse<T>> {
   const config = getZohoConfig()
 
-  // Resolve organization ID
+  // Auto-discover orgs on first API call (lazy, one-time)
+  await autoDiscoverOrganizations()
+
+  // Resolve organization ID (supports aliases)
   const orgIdResult = resolveOrganizationId(organizationId)
   if ("error" in orgIdResult) {
     return {

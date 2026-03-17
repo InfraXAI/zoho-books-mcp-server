@@ -14,6 +14,7 @@ import {
   getEffectiveOrgId,
   resolveOrgAlias,
   getOrgAliases,
+  autoDiscoverOrganizations,
 } from "../config.js"
 
 /**
@@ -33,6 +34,9 @@ Use switch_organization to change the active organization.`,
       openWorldHint: true,
     },
     execute: async () => {
+      // Auto-discover orgs and generate aliases on first call
+      await autoDiscoverOrganizations()
+
       const result = await zohoListOrganizations()
 
       if (!result.ok) {
@@ -137,6 +141,8 @@ Use list_organizations to see available orgs and aliases.`,
       openWorldHint: true,
     },
     execute: async (args) => {
+      // Ensure aliases are loaded before resolving
+      await autoDiscoverOrganizations()
       const orgId = resolveOrgAlias(args.organization_id)
 
       // Verify the org exists by fetching it
