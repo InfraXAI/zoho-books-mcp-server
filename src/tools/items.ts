@@ -157,8 +157,11 @@ Use list_taxes to find tax_id values.`,
       if (args.hsn_or_sac) payload.hsn_or_sac = args.hsn_or_sac
       if (args.tax_id) payload.tax_id = args.tax_id
       if (args.account_id) payload.account_id = args.account_id
-      if (args.purchase_rate) payload.purchase_rate = args.purchase_rate
-      if (args.purchase_account_id) payload.purchase_account_id = args.purchase_account_id
+      if (args.purchase_rate !== undefined || args.purchase_account_id) {
+        payload.item_type = "sales_and_purchases"
+        if (args.purchase_rate !== undefined) payload.purchase_rate = args.purchase_rate
+        if (args.purchase_account_id) payload.purchase_account_id = args.purchase_account_id
+      }
       if (args.unit) payload.unit = args.unit
 
       const result = await zohoPost<{ item: Item }>(
@@ -226,8 +229,11 @@ Only provided fields will be updated.`,
       if (args.hsn_or_sac) payload.hsn_or_sac = args.hsn_or_sac
       if (args.tax_id) payload.tax_id = args.tax_id
       if (args.account_id) payload.account_id = args.account_id
-      if (args.purchase_rate) payload.purchase_rate = args.purchase_rate
-      if (args.purchase_account_id) payload.purchase_account_id = args.purchase_account_id
+      if (args.purchase_rate !== undefined || args.purchase_account_id) {
+        payload.item_type = "sales_and_purchases"
+        if (args.purchase_rate !== undefined) payload.purchase_rate = args.purchase_rate
+        if (args.purchase_account_id) payload.purchase_account_id = args.purchase_account_id
+      }
       if (args.unit) payload.unit = args.unit
 
       const result = await zohoPut<{ item: Item }>(
