@@ -5,7 +5,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { getAccessToken, ZohoAuthError } from "../auth/oauth.js"
-import { getZohoConfig, MAX_FILE_SIZE_BYTES, REQUEST_TIMEOUT_MS } from "../config.js"
+import { getZohoConfig, getEffectiveOrgId, resolveOrgAlias, MAX_FILE_SIZE_BYTES, REQUEST_TIMEOUT_MS } from "../config.js"
 import { getMimeType, validateAttachment } from "../utils/mime-types.js"
 import { parseZohoResponse, type ParsedResponse } from "../utils/response-parser.js"
 
@@ -118,17 +118,25 @@ function createTimeoutController(timeoutMs: number = REQUEST_TIMEOUT_MS): {
 }
 
 /**
- * Resolve organization ID from parameter or environment config
- * Returns the resolved org ID or an error message if neither is available
+ * Resolve organization ID from parameter, session state, or environment config.
+ * Supports aliases (e.g., "naturnest" → "60026116971").
+ * Priority: explicit parameter > session default > env default.
  */
 function resolveOrganizationId(organizationId?: string): { orgId: string } | { error: string } {
-  const config = getZohoConfig()
-  const orgId = organizationId || config.organizationId
+  let orgId: string
+
+  if (organizationId) {
+    // Resolve alias if provided
+    orgId = resolveOrgAlias(organizationId)
+  } else {
+    // Use session default or env default
+    orgId = getEffectiveOrgId()
+  }
 
   if (!orgId) {
     return {
       error:
-        "Organization ID required. Set ZOHO_ORGANIZATION_ID environment variable or pass organization_id parameter.",
+        "Organization ID required. Set ZOHO_ORGANIZATION_ID environment variable, use switch_organization, or pass organization_id parameter (aliases supported).",
     }
   }
 

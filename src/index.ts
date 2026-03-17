@@ -38,11 +38,15 @@ const server = new FastMCP({
   instructions: `
 Zoho Books MCP server — AI CFO toolkit for complete financial management.
 
-## Organization ID
-The organization_id is pre-configured via ZOHO_ORGANIZATION_ID environment variable.
-You do NOT need to call list_organizations first - just use the tools directly.
+## Multi-Organization Support
+- Default org is pre-configured via ZOHO_ORGANIZATION_ID environment variable.
+- You can pass organization_id to any tool to target a specific org.
+- Org aliases are supported (e.g., "naturnest" instead of "60026116971") — configured via ZOHO_ORG_ALIASES env var.
+- Use switch_organization to change the active org for the entire session.
+- Use list_organizations to see all available orgs with aliases and active status.
+- Use get_organization_summary for a quick financial snapshot of any org.
 
-## Available Tools (86)
+## Available Tools (88)
 
 ### Chart of Accounts
 - list_accounts, get_account, create_account, list_account_transactions
@@ -99,8 +103,8 @@ You do NOT need to call list_organizations first - just use the tools directly.
 ### Bank Accounts
 - list_bank_accounts, get_bank_account, list_bank_transactions
 
-### Organizations (rarely needed)
-- list_organizations, get_organization
+### Organizations
+- list_organizations, get_organization, switch_organization, get_organization_summary
 `,
   health: {
     enabled: true,

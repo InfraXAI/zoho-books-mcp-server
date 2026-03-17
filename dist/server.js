@@ -1,7 +1,7 @@
 import {
   getServerConfig,
   src_default
-} from "./chunk-QAEUWBPC.js";
+} from "./chunk-I37GPWDA.js";
 
 // src/server.ts
 var config = getServerConfig();

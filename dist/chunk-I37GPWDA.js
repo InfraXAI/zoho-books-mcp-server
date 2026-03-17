@@ -17,12 +17,23 @@ function getZohoConfig() {
   const refreshToken = process.env.ZOHO_REFRESH_TOKEN || "";
   const apiUrl = process.env.ZOHO_API_URL || "https://www.zohoapis.in/books/v3";
   const organizationId = process.env.ZOHO_ORGANIZATION_ID || "";
+  const orgAliases = [];
+  const aliasStr = process.env.ZOHO_ORG_ALIASES || "";
+  if (aliasStr) {
+    aliasStr.split(",").forEach((pair) => {
+      const [alias, orgId] = pair.trim().split(":");
+      if (alias && orgId) {
+        orgAliases.push({ alias: alias.trim().toLowerCase(), orgId: orgId.trim() });
+      }
+    });
+  }
   return {
     clientId,
     clientSecret,
     refreshToken,
     apiUrl,
-    organizationId
+    organizationId,
+    orgAliases
   };
 }
 function getServerConfig() {
@@ -45,6 +56,30 @@ function validateZohoConfig(config) {
     return { valid: false, error: "ZOHO_API_URL must use HTTPS" };
   }
   return { valid: true };
+}
+var sessionOrgId = null;
+var orgNameCache = /* @__PURE__ */ new Map();
+function setSessionOrganization(orgId, orgName) {
+  sessionOrgId = orgId;
+  if (orgName) {
+    orgNameCache.set(orgId, orgName);
+  }
+}
+function getEffectiveOrgId() {
+  return sessionOrgId || getZohoConfig().organizationId;
+}
+function cacheOrgName(orgId, name) {
+  orgNameCache.set(orgId, name);
+}
+function resolveOrgAlias(input) {
+  const config = getZohoConfig();
+  const lower = input.toLowerCase().trim();
+  const match = config.orgAliases.find((a) => a.alias === lower);
+  if (match) return match.orgId;
+  return input;
+}
+function getOrgAliases() {
+  return getZohoConfig().orgAliases;
 }
 function getZohoOAuthUrl(apiUrl) {
   if (apiUrl.includes("zohoapis.eu")) {
@@ -395,11 +430,15 @@ function createTimeoutController(timeoutMs = REQUEST_TIMEOUT_MS) {
   return { controller, timeoutId, timeoutMs };
 }
 function resolveOrganizationId(organizationId) {
-  const config = getZohoConfig();
-  const orgId = organizationId || config.organizationId;
+  let orgId;
+  if (organizationId) {
+    orgId = resolveOrgAlias(organizationId);
+  } else {
+    orgId = getEffectiveOrgId();
+  }
   if (!orgId) {
     return {
-      error: "Organization ID required. Set ZOHO_ORGANIZATION_ID environment variable or pass organization_id parameter."
+      error: "Organization ID required. Set ZOHO_ORGANIZATION_ID environment variable, use switch_organization, or pass organization_id parameter (aliases supported)."
     };
   }
   return { orgId };
@@ -664,8 +703,8 @@ function registerOrganizationTools(server2) {
   server2.addTool({
     name: "list_organizations",
     description: `List all Zoho organizations the user has access to.
-Use this tool first to get organization_id for all other tools.
-Returns organization name, ID, currency, and timezone.`,
+Returns organization name, ID, currency, timezone, and configured aliases.
+Use switch_organization to change the active organization.`,
     parameters: z2.object({}),
     annotations: {
       title: "List Organizations",
@@ -681,9 +720,18 @@ Returns organization name, ID, currency, and timezone.`,
       if (organizations.length === 0) {
         return "No organizations found. Make sure your Zoho credentials have access to at least one organization.";
       }
+      organizations.forEach((org) => {
+        cacheOrgName(org.organization_id, org.name);
+      });
+      const aliases = getOrgAliases();
+      const currentOrgId = getEffectiveOrgId();
       const formatted = organizations.map((org, index) => {
-        return `${index + 1}. **${org.name}**${org.is_default_org ? " (default)" : ""}
-   - Organization ID: \`${org.organization_id}\`
+        const alias = aliases.find((a) => a.orgId === org.organization_id);
+        const isActive = org.organization_id === currentOrgId;
+        const activeMarker = isActive ? " \u2190 **ACTIVE**" : "";
+        const aliasStr = alias ? ` (alias: \`${alias.alias}\`)` : "";
+        return `${index + 1}. **${org.name}**${activeMarker}
+   - Organization ID: \`${org.organization_id}\`${aliasStr}
    - Currency: ${org.currency_code} (${org.currency_symbol})
    - Timezone: ${org.time_zone}
    - Fiscal Year Start: Month ${org.fiscal_year_start_month}`;
@@ -693,7 +741,7 @@ Returns organization name, ID, currency, and timezone.`,
 ${formatted}
 
 ---
-Use the organization_id in subsequent API calls.`;
+Use \`switch_organization\` to change the active org, or pass \`organization_id\` (alias or ID) to any tool.`;
     }
   });
   server2.addTool({
@@ -702,7 +750,7 @@ Use the organization_id in subsequent API calls.`;
 Returns full organization details including address, contact info, and settings.`,
     parameters: z2.object({
       organization_id: optionalOrganizationIdSchema.describe(
-        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+        "Zoho org ID or alias (uses active org if not provided)"
       )
     }),
     annotations: {
@@ -711,9 +759,10 @@ Returns full organization details including address, contact info, and settings.
       openWorldHint: true
     },
     execute: async (args) => {
+      const orgId = args.organization_id ? resolveOrgAlias(args.organization_id) : getEffectiveOrgId();
       const result = await zohoGet(
-        `/organizations/${args.organization_id}`,
-        args.organization_id
+        `/organizations/${orgId}`,
+        orgId
       );
       if (!result.ok) {
         return result.errorMessage || "Failed to get organization";
@@ -722,6 +771,7 @@ Returns full organization details including address, contact info, and settings.
       if (!org) {
         return "Organization not found";
       }
+      cacheOrgName(org.organization_id, org.name);
       return `**Organization Details**
 
 - **Name**: ${org.name}
@@ -732,6 +782,99 @@ Returns full organization details including address, contact info, and settings.
 - **Language**: ${org.language_code}
 - **Fiscal Year Start**: Month ${org.fiscal_year_start_month}
 - **Created**: ${org.account_created_date}`;
+    }
+  });
+  server2.addTool({
+    name: "switch_organization",
+    description: `Switch the active organization for this session.
+All subsequent tool calls will use this organization by default.
+Accepts an organization ID or alias (e.g., "naturnest", "infrax").
+Use list_organizations to see available orgs and aliases.`,
+    parameters: z2.object({
+      organization_id: z2.string().describe("Organization ID or alias to switch to")
+    }),
+    annotations: {
+      title: "Switch Organization",
+      readOnlyHint: false,
+      openWorldHint: true
+    },
+    execute: async (args) => {
+      const orgId = resolveOrgAlias(args.organization_id);
+      const result = await zohoGet(
+        `/organizations/${orgId}`,
+        orgId
+      );
+      if (!result.ok) {
+        return result.errorMessage || `Failed to switch to organization \`${args.organization_id}\`. Check if the ID/alias is correct.`;
+      }
+      const org = result.data?.organization;
+      if (!org) {
+        return `Organization \`${args.organization_id}\` not found.`;
+      }
+      setSessionOrganization(orgId, org.name);
+      return `**Organization Switched**
+
+Now using: **${org.name}** (\`${org.organization_id}\`)
+Currency: ${org.currency_code} | Timezone: ${org.time_zone}
+
+All subsequent tool calls will use this organization by default.`;
+    }
+  });
+  server2.addTool({
+    name: "get_organization_summary",
+    description: `Get a quick financial snapshot of an organization.
+Shows organization info, GST status, plan, and key settings.
+Useful for a CFO's daily overview.`,
+    parameters: z2.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID or alias (uses active org if not provided)"
+      )
+    }),
+    annotations: {
+      title: "Organization Summary",
+      readOnlyHint: true,
+      openWorldHint: true
+    },
+    execute: async (args) => {
+      const orgId = args.organization_id ? resolveOrgAlias(args.organization_id) : getEffectiveOrgId();
+      const result = await zohoListOrganizations();
+      if (!result.ok) {
+        return result.errorMessage || "Failed to get organization summary";
+      }
+      const organizations = result.data?.organizations || [];
+      const org = organizations.find((o) => o.organization_id === orgId);
+      if (!org) {
+        return `Organization \`${orgId}\` not found.`;
+      }
+      if (typeof org.name === "string") {
+        cacheOrgName(orgId, org.name);
+      }
+      const currentOrgId = getEffectiveOrgId();
+      const isActive = orgId === currentOrgId;
+      return `**Organization Summary${isActive ? " (Active)" : ""}**
+
+**General**
+- **Name**: ${org.name}
+- **Organization ID**: \`${org.organization_id}\`
+- **Country**: ${org.country || "N/A"}
+- **State**: ${org.state || "N/A"}
+- **Currency**: ${org.currency_code} (${org.currency_symbol})
+- **Timezone**: ${org.time_zone}
+
+**Compliance**
+- **GST Registered**: ${org.is_registered_for_gst ? "Yes" : "No"}
+- **Tax Registered**: ${org.is_tax_registered ? "Yes" : "No"}
+- **HSN/SAC Enabled**: ${org.is_hsn_or_sac_enabled ? "Yes" : "No"}
+- **Tax Type**: ${org.sales_tax_type || "N/A"}
+
+**Plan**
+- **Plan**: ${org.plan_name || "N/A"} (${org.plan_period || "N/A"})
+- **Mode**: ${org.mode || "N/A"}
+- **Created**: ${org.account_created_date_formatted || org.account_created_date || "N/A"}
+
+**Fiscal**
+- **Fiscal Year Start**: Month ${org.fiscal_year_start_month}
+- **Version**: ${org.version_formatted || org.version || "N/A"}`;
     }
   });
 }
@@ -4563,11 +4706,15 @@ var server = new FastMCP({
   instructions: `
 Zoho Books MCP server \u2014 AI CFO toolkit for complete financial management.
 
-## Organization ID
-The organization_id is pre-configured via ZOHO_ORGANIZATION_ID environment variable.
-You do NOT need to call list_organizations first - just use the tools directly.
+## Multi-Organization Support
+- Default org is pre-configured via ZOHO_ORGANIZATION_ID environment variable.
+- You can pass organization_id to any tool to target a specific org.
+- Org aliases are supported (e.g., "naturnest" instead of "60026116971") \u2014 configured via ZOHO_ORG_ALIASES env var.
+- Use switch_organization to change the active org for the entire session.
+- Use list_organizations to see all available orgs with aliases and active status.
+- Use get_organization_summary for a quick financial snapshot of any org.
 
-## Available Tools (86)
+## Available Tools (88)
 
 ### Chart of Accounts
 - list_accounts, get_account, create_account, list_account_transactions
@@ -4624,8 +4771,8 @@ You do NOT need to call list_organizations first - just use the tools directly.
 ### Bank Accounts
 - list_bank_accounts, get_bank_account, list_bank_transactions
 
-### Organizations (rarely needed)
-- list_organizations, get_organization
+### Organizations
+- list_organizations, get_organization, switch_organization, get_organization_summary
 `,
   health: {
     enabled: true,
