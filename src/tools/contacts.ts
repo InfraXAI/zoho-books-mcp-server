@@ -106,6 +106,21 @@ Returns full contact details including payment terms and currency settings.`,
         return "Contact not found"
       }
 
+      const c = contact as Record<string, unknown>
+      const billingAddr = c.billing_address as Record<string, string> | undefined
+      const shippingAddr = c.shipping_address as Record<string, string> | undefined
+
+      const formatAddr = (addr: Record<string, string> | undefined): string => {
+        if (!addr) return "N/A"
+        const parts = [addr.attention, addr.address, addr.street2, addr.city, addr.state, addr.zip, addr.country].filter(Boolean)
+        return parts.length > 0 ? parts.join(", ") : "N/A"
+      }
+
+      const contactPersons = c.contact_persons as Array<Record<string, unknown>> | undefined
+      const personsStr = contactPersons && contactPersons.length > 0
+        ? contactPersons.map((p, i) => `  ${i + 1}. ${p.first_name || ""} ${p.last_name || ""} — ${p.designation || "N/A"} — ${p.email || "N/A"} — ${p.phone || p.mobile || "N/A"}`).join("\n")
+        : "N/A"
+
       return `**Contact Details**
 
 - **Contact ID**: \`${contact.contact_id}\`
@@ -114,17 +129,52 @@ Returns full contact details including payment terms and currency settings.`,
 - **Company**: ${contact.company_name || "N/A"}
 - **Email**: ${contact.email || "N/A"}
 - **Phone**: ${contact.phone || "N/A"}
+- **Website**: ${c.website || "N/A"}
 - **Status**: ${contact.status}
 - **Payment Terms**: ${contact.payment_terms ? `${contact.payment_terms} days` : "N/A"}
-- **Currency**: ${contact.currency_code || "N/A"}`
+- **Currency**: ${contact.currency_code || "N/A"}
+- **GST Treatment**: ${c.gst_treatment || "N/A"}
+- **GST No**: ${c.gst_no || "N/A"}
+- **Place of Contact**: ${c.place_of_contact || "N/A"}
+- **Billing Address**: ${formatAddr(billingAddr)}
+- **Shipping Address**: ${formatAddr(shippingAddr)}
+- **Contact Persons**:
+${personsStr}`
     },
   })
+
+  // Address schema for billing and shipping
+  const addressSchema = z.object({
+    attention: z.string().optional().describe("Attention / recipient name"),
+    address: z.string().optional().describe("Street address line 1"),
+    street2: z.string().optional().describe("Street address line 2"),
+    city: z.string().optional().describe("City"),
+    state: z.string().optional().describe("State name"),
+    state_code: z.string().optional().describe("State code (e.g., KA, MH, JH)"),
+    zip: z.string().optional().describe("PIN / ZIP code"),
+    country: z.string().optional().describe("Country (e.g., India)"),
+    phone: z.string().optional().describe("Phone at this address"),
+    fax: z.string().optional().describe("Fax number"),
+  }).describe("Address object")
+
+  // Contact person schema
+  const contactPersonSchema = z.object({
+    first_name: z.string().optional().describe("First name"),
+    last_name: z.string().optional().describe("Last name"),
+    email: z.string().optional().describe("Email address"),
+    phone: z.string().optional().describe("Phone number"),
+    mobile: z.string().optional().describe("Mobile number"),
+    designation: z.string().optional().describe("Designation / title"),
+    department: z.string().optional().describe("Department"),
+    is_primary_contact: z.boolean().optional().describe("Set as primary contact"),
+  }).describe("Contact person details")
 
   // Create Contact
   server.addTool({
     name: "create_contact",
     description: `Create a new contact (customer or vendor).
-Provide contact details including name, type, and optional fields like email, phone, GST info.`,
+Provide contact details including name, type, and optional fields like email, phone, GST info.
+For Indian customers/vendors, always provide gst_treatment, gst_no (if registered), and place_of_contact.`,
     parameters: z.object({
       organization_id: optionalOrganizationIdSchema.describe(
         "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
@@ -134,12 +184,16 @@ Provide contact details including name, type, and optional fields like email, ph
       company_name: z.string().optional().describe("Company name"),
       email: z.string().optional().describe("Email address"),
       phone: z.string().optional().describe("Phone number"),
-      gst_no: z.string().optional().describe("GST number"),
+      website: z.string().optional().describe("Website URL"),
+      gst_no: z.string().optional().describe("15-digit GSTIN (e.g., 20AANFA0219Q2ZI)"),
       gst_treatment: z
-        .enum(["registered", "unregistered", "consumer", "overseas"])
+        .enum(["business_gst", "business_none", "consumer", "overseas"])
         .optional()
-        .describe("GST treatment type"),
-      place_of_supply: z.string().optional().describe("Place of supply (state code for GST)"),
+        .describe("GST treatment: business_gst (registered), business_none (unregistered), consumer, overseas"),
+      place_of_contact: z.string().optional().describe("Place of supply/contact — Indian state name (e.g., Jharkhand, Haryana, Karnataka). Determines IGST vs CGST+SGST."),
+      billing_address: addressSchema.optional().describe("Billing address"),
+      shipping_address: addressSchema.optional().describe("Shipping / dispatch address"),
+      contact_persons: z.array(contactPersonSchema).optional().describe("Contact persons (array)"),
       payment_terms: z.number().int().optional().describe("Payment terms in days"),
       notes: z.string().optional().describe("Notes about the contact"),
     }),
@@ -156,9 +210,13 @@ Provide contact details including name, type, and optional fields like email, ph
       if (args.company_name) body.company_name = args.company_name
       if (args.email) body.email = args.email
       if (args.phone) body.phone = args.phone
+      if (args.website) body.website = args.website
       if (args.gst_no) body.gst_no = args.gst_no
       if (args.gst_treatment) body.gst_treatment = args.gst_treatment
-      if (args.place_of_supply) body.place_of_supply = args.place_of_supply
+      if (args.place_of_contact) body.place_of_contact = args.place_of_contact
+      if (args.billing_address) body.billing_address = args.billing_address
+      if (args.shipping_address) body.shipping_address = args.shipping_address
+      if (args.contact_persons) body.contact_persons = args.contact_persons
       if (args.payment_terms !== undefined) body.payment_terms = args.payment_terms
       if (args.notes) body.notes = args.notes
 
@@ -194,7 +252,8 @@ Provide contact details including name, type, and optional fields like email, ph
   server.addTool({
     name: "update_contact",
     description: `Update an existing contact's details.
-Only provided fields will be updated; omitted fields remain unchanged.`,
+Only provided fields will be updated; omitted fields remain unchanged.
+For Indian customers/vendors, use this to set gst_treatment, gst_no, place_of_contact, and addresses.`,
     parameters: z.object({
       organization_id: optionalOrganizationIdSchema.describe(
         "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
@@ -204,8 +263,18 @@ Only provided fields will be updated; omitted fields remain unchanged.`,
       company_name: z.string().optional().describe("Updated company name"),
       email: z.string().optional().describe("Updated email address"),
       phone: z.string().optional().describe("Updated phone number"),
-      gst_no: z.string().optional().describe("Updated GST number"),
+      website: z.string().optional().describe("Updated website URL"),
+      gst_no: z.string().optional().describe("Updated 15-digit GSTIN"),
+      gst_treatment: z
+        .enum(["business_gst", "business_none", "consumer", "overseas"])
+        .optional()
+        .describe("GST treatment: business_gst (registered), business_none (unregistered), consumer, overseas"),
+      place_of_contact: z.string().optional().describe("Place of supply/contact — Indian state name (e.g., Jharkhand, Haryana). Determines IGST vs CGST+SGST."),
+      billing_address: addressSchema.optional().describe("Billing address"),
+      shipping_address: addressSchema.optional().describe("Shipping / dispatch address"),
+      contact_persons: z.array(contactPersonSchema).optional().describe("Contact persons (array)"),
       payment_terms: z.number().int().optional().describe("Updated payment terms in days"),
+      notes: z.string().optional().describe("Updated notes"),
     }),
     annotations: {
       title: "Update Contact",
@@ -218,8 +287,15 @@ Only provided fields will be updated; omitted fields remain unchanged.`,
       if (args.company_name) body.company_name = args.company_name
       if (args.email) body.email = args.email
       if (args.phone) body.phone = args.phone
+      if (args.website) body.website = args.website
       if (args.gst_no) body.gst_no = args.gst_no
+      if (args.gst_treatment) body.gst_treatment = args.gst_treatment
+      if (args.place_of_contact) body.place_of_contact = args.place_of_contact
+      if (args.billing_address) body.billing_address = args.billing_address
+      if (args.shipping_address) body.shipping_address = args.shipping_address
+      if (args.contact_persons) body.contact_persons = args.contact_persons
       if (args.payment_terms !== undefined) body.payment_terms = args.payment_terms
+      if (args.notes) body.notes = args.notes
 
       const result = await zohoPut<{ contact: Contact }>(
         `/contacts/${args.contact_id}`,
@@ -245,6 +321,9 @@ Only provided fields will be updated; omitted fields remain unchanged.`,
 - **Company**: ${contact.company_name || "N/A"}
 - **Email**: ${contact.email || "N/A"}
 - **Phone**: ${contact.phone || "N/A"}
+- **GST No**: ${(contact as Record<string, unknown>).gst_no || "N/A"}
+- **GST Treatment**: ${(contact as Record<string, unknown>).gst_treatment || "N/A"}
+- **Place of Contact**: ${(contact as Record<string, unknown>).place_of_contact || "N/A"}
 - **Status**: ${contact.status}`
     },
   })
