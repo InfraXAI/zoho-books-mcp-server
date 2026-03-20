@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 import type { FastMCP } from "fastmcp"
-import { zohoGet, zohoPost, zohoUploadAttachment, zohoDeleteAttachment } from "../api/client.js"
+import { zohoGet, zohoPost, zohoPut, zohoDelete, zohoUploadAttachment, zohoDeleteAttachment } from "../api/client.js"
 import type { Expense, Attachment } from "../api/types.js"
 import {
   moneySchema,
@@ -203,6 +203,66 @@ Use this expense_id to add receipts.`
     },
   })
 
+  // Update Expense
+  server.addTool({
+    name: "update_expense",
+    description: `Update an existing expense record.
+Can update description, reference number, amount, date, vendor, and other fields.
+Use this to add bank narrations and reference numbers for audit trail.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      expense_id: entityIdSchema.describe("Expense ID to update"),
+      description: z.string().max(500).optional().describe("Updated description"),
+      reference_number: z.string().max(100).optional().describe("Bank reference / transaction number"),
+      amount: moneySchema.optional().describe("Updated amount"),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Updated date (YYYY-MM-DD)"),
+      vendor_id: entityIdSchema.optional().describe("Updated vendor ID"),
+    }),
+    annotations: {
+      title: "Update Expense",
+      readOnlyHint: false,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const payload: Record<string, unknown> = {}
+
+      if (args.description) payload.description = args.description
+      if (args.reference_number) payload.reference_number = args.reference_number
+      if (args.amount) payload.amount = args.amount
+      if (args.date) payload.date = args.date
+      if (args.vendor_id) payload.vendor_id = args.vendor_id
+
+      if (Object.keys(payload).length === 0) {
+        return "No fields to update. Provide at least one field."
+      }
+
+      const result = await zohoPut<{ expense: Expense }>(
+        `/expenses/${args.expense_id}`,
+        args.organization_id,
+        payload
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to update expense"
+      }
+
+      const expense = result.data?.expense
+
+      if (!expense) {
+        return "Expense updated successfully"
+      }
+
+      return `**Expense Updated Successfully**
+
+- **Expense ID**: \`${expense.expense_id}\`
+- **Date**: ${expense.date}
+- **Reference**: ${expense.reference_number || "N/A"}
+- **Description**: ${expense.description || "N/A"}`
+    },
+  })
+
   // Add Expense Receipt (Attachment)
   server.addTool({
     name: "add_expense_receipt",
@@ -310,6 +370,39 @@ Removes the file association from the expense.`,
       return `**Receipt Deleted Successfully**
 
 Receipt removed from expense \`${args.expense_id}\`.`
+    },
+  })
+
+  // Delete Expense
+  server.addTool({
+    name: "delete_expense",
+    description: `Delete an expense record.
+This action cannot be undone. The expense will be permanently removed.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      expense_id: entityIdSchema.describe("Expense ID to delete"),
+    }),
+    annotations: {
+      title: "Delete Expense",
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const result = await zohoDelete<Record<string, unknown>>(
+        `/expenses/${args.expense_id}`,
+        args.organization_id
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to delete expense"
+      }
+
+      return `**Expense Deleted Successfully**
+
+Expense \`${args.expense_id}\` has been permanently removed.`
     },
   })
 }
