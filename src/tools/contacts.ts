@@ -9,9 +9,75 @@ import type { Contact } from "../api/types.js"
 import { optionalOrganizationIdSchema } from "../utils/validation.js"
 
 /**
+ * Resolve a 3-letter currency code (e.g. "USD") to Zoho's internal currency_id.
+ * Returns null if the code is not found in the org's configured currencies.
+ */
+async function resolveCurrencyId(
+  currencyCode: string,
+  organizationId: string | undefined
+): Promise<string | null> {
+  const result = await zohoGet<{ currencies: Array<{ currency_id: string; currency_code: string }> }>(
+    "/settings/currencies",
+    organizationId
+  )
+  if (!result.ok || !result.data?.currencies) return null
+  const match = result.data.currencies.find(
+    (c) => c.currency_code.toUpperCase() === currencyCode.toUpperCase()
+  )
+  return match?.currency_id ?? null
+}
+
+/**
  * Register contact tools on the server
  */
 export function registerContactTools(server: FastMCP): void {
+  // List Currencies
+  server.addTool({
+    name: "list_currencies",
+    description: `List all currencies configured in the organization.
+Returns currency_id, currency_code, currency_name, exchange_rate, and symbol.
+Useful for finding currency_id values or confirming which currencies are enabled.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+    }),
+    annotations: {
+      title: "List Currencies",
+      readOnlyHint: true,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const result = await zohoGet<{
+        currencies: Array<{
+          currency_id: string
+          currency_code: string
+          currency_name: string
+          currency_symbol?: string
+          exchange_rate?: number
+          is_base_currency?: boolean
+        }>
+      }>("/settings/currencies", args.organization_id)
+
+      if (!result.ok) return result.errorMessage || "Failed to list currencies"
+      const currencies = result.data?.currencies || []
+      if (currencies.length === 0) return "No currencies configured."
+
+      const formatted = currencies
+        .map(
+          (c, i) =>
+            `${i + 1}. **${c.currency_code}** ${c.is_base_currency ? "(base)" : ""}
+   - ID: \`${c.currency_id}\`
+   - Name: ${c.currency_name}
+   - Symbol: ${c.currency_symbol || "N/A"}
+   - Rate: ${c.exchange_rate ?? "N/A"}`
+        )
+        .join("\n\n")
+
+      return `**Currencies** (${currencies.length})\n\n${formatted}`
+    },
+  })
+
   // List Contacts
   server.addTool({
     name: "list_contacts",
@@ -215,7 +281,13 @@ For Indian customers/vendors, always provide gst_treatment, gst_no (if registere
       if (args.gst_no) body.gst_no = args.gst_no
       if (args.gst_treatment) body.gst_treatment = args.gst_treatment
       if (args.place_of_contact) body.place_of_contact = args.place_of_contact
-      if (args.currency_code) body.currency_code = args.currency_code
+      if (args.currency_code) {
+        const currencyId = await resolveCurrencyId(args.currency_code, args.organization_id)
+        if (!currencyId) {
+          return `Currency code '${args.currency_code}' not found in this org. Use list_currencies to see configured currencies (the code may need to be added to the org first).`
+        }
+        body.currency_id = currencyId
+      }
       if (args.billing_address) body.billing_address = args.billing_address
       if (args.shipping_address) body.shipping_address = args.shipping_address
       if (args.contact_persons) body.contact_persons = args.contact_persons
@@ -294,7 +366,13 @@ For Indian customers/vendors, use this to set gst_treatment, gst_no, place_of_co
       if (args.gst_no) body.gst_no = args.gst_no
       if (args.gst_treatment) body.gst_treatment = args.gst_treatment
       if (args.place_of_contact) body.place_of_contact = args.place_of_contact
-      if (args.currency_code) body.currency_code = args.currency_code
+      if (args.currency_code) {
+        const currencyId = await resolveCurrencyId(args.currency_code, args.organization_id)
+        if (!currencyId) {
+          return `Currency code '${args.currency_code}' not found in this org. Use list_currencies to see configured currencies.`
+        }
+        body.currency_id = currencyId
+      }
       if (args.billing_address) body.billing_address = args.billing_address
       if (args.shipping_address) body.shipping_address = args.shipping_address
       if (args.contact_persons) body.contact_persons = args.contact_persons
