@@ -191,6 +191,7 @@ For Indian customers/vendors, always provide gst_treatment, gst_no (if registere
         .optional()
         .describe("GST treatment: business_gst (registered), business_none (unregistered), consumer, overseas"),
       place_of_contact: z.string().optional().describe("Place of supply/contact — Indian state name (e.g., Jharkhand, Haryana, Karnataka). Determines IGST vs CGST+SGST."),
+      currency_code: z.string().optional().describe("3-letter currency code (e.g., USD, EUR, GBP, INR). Defaults to org base currency. Use for overseas customers/vendors."),
       billing_address: addressSchema.optional().describe("Billing address"),
       shipping_address: addressSchema.optional().describe("Shipping / dispatch address"),
       contact_persons: z.array(contactPersonSchema).optional().describe("Contact persons (array)"),
@@ -214,6 +215,7 @@ For Indian customers/vendors, always provide gst_treatment, gst_no (if registere
       if (args.gst_no) body.gst_no = args.gst_no
       if (args.gst_treatment) body.gst_treatment = args.gst_treatment
       if (args.place_of_contact) body.place_of_contact = args.place_of_contact
+      if (args.currency_code) body.currency_code = args.currency_code
       if (args.billing_address) body.billing_address = args.billing_address
       if (args.shipping_address) body.shipping_address = args.shipping_address
       if (args.contact_persons) body.contact_persons = args.contact_persons
@@ -270,6 +272,7 @@ For Indian customers/vendors, use this to set gst_treatment, gst_no, place_of_co
         .optional()
         .describe("GST treatment: business_gst (registered), business_none (unregistered), consumer, overseas"),
       place_of_contact: z.string().optional().describe("Place of supply/contact — Indian state name (e.g., Jharkhand, Haryana). Determines IGST vs CGST+SGST."),
+      currency_code: z.string().optional().describe("3-letter currency code (e.g., USD, EUR, GBP, INR). Use to change a contact's currency."),
       billing_address: addressSchema.optional().describe("Billing address"),
       shipping_address: addressSchema.optional().describe("Shipping / dispatch address"),
       contact_persons: z.array(contactPersonSchema).optional().describe("Contact persons (array)"),
@@ -291,6 +294,7 @@ For Indian customers/vendors, use this to set gst_treatment, gst_no, place_of_co
       if (args.gst_no) body.gst_no = args.gst_no
       if (args.gst_treatment) body.gst_treatment = args.gst_treatment
       if (args.place_of_contact) body.place_of_contact = args.place_of_contact
+      if (args.currency_code) body.currency_code = args.currency_code
       if (args.billing_address) body.billing_address = args.billing_address
       if (args.shipping_address) body.shipping_address = args.shipping_address
       if (args.contact_persons) body.contact_persons = args.contact_persons
