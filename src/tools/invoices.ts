@@ -2,9 +2,11 @@
  * Invoice tools for Zoho Books API
  */
 
+import * as path from "path"
+import * as os from "os"
 import { z } from "zod"
 import type { FastMCP } from "fastmcp"
-import { zohoGet, zohoPost, zohoPut, zohoUploadAttachment, zohoDeleteAttachment } from "../api/client.js"
+import { zohoGet, zohoPost, zohoPut, zohoUploadAttachment, zohoDeleteAttachment, zohoDownloadPdf } from "../api/client.js"
 import type { Invoice, Attachment } from "../api/types.js"
 import { optionalOrganizationIdSchema } from "../utils/validation.js"
 
@@ -16,6 +18,7 @@ const invoiceLineItemSchema = z.object({
   rate: z.number().nonnegative().describe("Unit rate/price"),
   tax_id: z.string().optional().describe("Tax ID"),
   discount: z.number().optional().describe("Discount percentage"),
+  hsn_or_sac: z.string().optional().describe("HSN code (goods) or SAC code (services) — e.g., '997331' or '998515'"),
 })
 
 /**
@@ -491,6 +494,89 @@ Sends the invoice PDF to the provided email addresses.`,
 
 - **Invoice ID**: \`${args.invoice_id}\`
 - **Sent to**: ${args.to_mail_ids.join(", ")}`
+    },
+  })
+
+  // Download Invoice PDF
+  server.addTool({
+    name: "download_invoice_pdf",
+    description: `Download the generated invoice PDF to a local file.
+This downloads the Zoho-generated invoice PDF (not manually attached files).
+Useful for archiving, emailing via other channels, or local review.
+Returns the local file path where the PDF was saved.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      invoice_id: z.string().describe("Invoice ID to download PDF for"),
+      output_path: z
+        .string()
+        .optional()
+        .describe(
+          "Full file path to save the PDF (e.g., ~/Downloads/INV-001.pdf). " +
+          "If omitted, saves to ~/Downloads/invoice-{invoice_id}.pdf"
+        ),
+    }),
+    annotations: {
+      title: "Download Invoice PDF",
+      readOnlyHint: true,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      // Determine output path
+      let outputPath = args.output_path
+      if (!outputPath) {
+        const downloadsDir = path.join(os.homedir(), "Downloads")
+        outputPath = path.join(downloadsDir, `invoice-${args.invoice_id}.pdf`)
+      }
+
+      // Expand ~ to home directory
+      if (outputPath.startsWith("~")) {
+        outputPath = path.join(os.homedir(), outputPath.slice(1))
+      }
+
+      // Resolve to absolute path
+      outputPath = path.resolve(outputPath)
+
+      // Ensure it ends with .pdf
+      if (!outputPath.toLowerCase().endsWith(".pdf")) {
+        outputPath += ".pdf"
+      }
+
+      // First, get the invoice to retrieve the invoice number for a better filename
+      const invoiceResult = await zohoGet<{ invoice: Invoice }>(
+        `/invoices/${args.invoice_id}`,
+        args.organization_id
+      )
+
+      // If we got the invoice details and no custom path was given, use invoice number
+      if (!args.output_path && invoiceResult.ok && invoiceResult.data?.invoice?.invoice_number) {
+        const invoiceNumber = invoiceResult.data.invoice.invoice_number
+        // Sanitize invoice number for filename
+        const safeNumber = invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "_")
+        const downloadsDir = path.join(os.homedir(), "Downloads")
+        outputPath = path.join(downloadsDir, `${safeNumber}.pdf`)
+      }
+
+      const result = await zohoDownloadPdf(
+        `/invoices/${args.invoice_id}`,
+        args.organization_id,
+        outputPath
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to download invoice PDF"
+      }
+
+      const invoiceNum = invoiceResult.ok
+        ? invoiceResult.data?.invoice?.invoice_number || args.invoice_id
+        : args.invoice_id
+
+      return `**Invoice PDF Downloaded**
+
+- **Invoice**: ${invoiceNum}
+- **Invoice ID**: \`${args.invoice_id}\`
+- **Saved to**: ${result.filePath}`
     },
   })
 }
