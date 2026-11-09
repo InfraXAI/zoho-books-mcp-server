@@ -119,7 +119,7 @@ function createTimeoutController(timeoutMs: number = REQUEST_TIMEOUT_MS): {
 
 /**
  * Resolve organization ID from parameter, session state, or environment config.
- * Supports aliases (e.g., "naturnest" → "60026116971").
+ * Supports aliases (e.g., "naturnest" → "60000000001").
  * Priority: explicit parameter > session default > env default.
  */
 function resolveOrganizationId(organizationId?: string): { orgId: string } | { error: string } {

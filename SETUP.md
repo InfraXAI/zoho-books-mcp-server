@@ -61,7 +61,7 @@ ZOHO_API_URL=https://www.zohoapis.in/books/v3
 Org aliases are auto-discovered from organization names on first API call.
 To override with custom aliases, add:
 ```
-ZOHO_ORG_ALIASES=naturnest:60026116971,infrax:60002170422
+ZOHO_ORG_ALIASES=naturnest:60000000001,infrax:60000000002
 ```
 
 ## Step 5: Build

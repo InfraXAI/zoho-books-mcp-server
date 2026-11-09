@@ -40,7 +40,7 @@ export function getZohoConfig(): ZohoConfig {
   const apiUrl = process.env.ZOHO_API_URL || "https://www.zohoapis.in/books/v3"
   const organizationId = process.env.ZOHO_ORGANIZATION_ID || ""
 
-  // Parse org aliases from env: "naturnest:60026116971,infrax:60002170422"
+  // Parse org aliases from env: "naturnest:60000000001,infrax:60000000002"
   const orgAliases: OrgAlias[] = []
   const aliasStr = process.env.ZOHO_ORG_ALIASES || ""
   if (aliasStr) {
