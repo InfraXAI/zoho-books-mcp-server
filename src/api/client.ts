@@ -442,6 +442,109 @@ export async function zohoDeleteAttachment(
 }
 
 /**
+ * Download a PDF from a Zoho Books entity (e.g., invoice, estimate, purchase order).
+ * Makes a GET request with accept=pdf query param and returns raw PDF bytes.
+ * Saves the PDF to the specified output path.
+ */
+export async function zohoDownloadPdf(
+  endpoint: string,
+  organizationId: string | undefined,
+  outputPath: string
+): Promise<{ ok: boolean; filePath?: string; errorMessage?: string }> {
+  const config = getZohoConfig()
+
+  // Auto-discover orgs on first API call (lazy, one-time)
+  await autoDiscoverOrganizations()
+
+  // Resolve organization ID (supports aliases)
+  const orgIdResult = resolveOrganizationId(organizationId)
+  if ("error" in orgIdResult) {
+    return { ok: false, errorMessage: orgIdResult.error }
+  }
+
+  let token: string
+  try {
+    token = await getAccessToken()
+  } catch (error) {
+    if (error instanceof ZohoAuthError) {
+      return { ok: false, errorMessage: error.message }
+    }
+    return {
+      ok: false,
+      errorMessage: `Authentication error: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+
+  // Build URL with accept=pdf
+  const url = new URL(`${config.apiUrl}${endpoint}`)
+  url.searchParams.set("organization_id", orgIdResult.orgId)
+  url.searchParams.set("accept", "pdf")
+
+  // Security: Add request timeout (use longer timeout for PDF downloads)
+  const { controller, timeoutId, timeoutMs } = createTimeoutController(60000)
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Zoho-oauthtoken ${token}`,
+      },
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      // Try to read error body
+      const errorText = await response.text().catch(() => "Unknown error")
+      return {
+        ok: false,
+        errorMessage: `Zoho API returned ${response.status}: ${errorText}`,
+      }
+    }
+
+    // Verify we got PDF content
+    const contentType = response.headers.get("content-type") || ""
+    if (!contentType.includes("pdf") && !contentType.includes("octet-stream")) {
+      // Might be a JSON error response
+      const text = await response.text().catch(() => "")
+      return {
+        ok: false,
+        errorMessage: `Expected PDF response but got ${contentType}. Body: ${text.slice(0, 200)}`,
+      }
+    }
+
+    // Read response as ArrayBuffer and write to disk
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    if (buffer.length === 0) {
+      return { ok: false, errorMessage: "Received empty PDF response" }
+    }
+
+    // Ensure output directory exists
+    const outputDir = path.dirname(outputPath)
+    await fs.promises.mkdir(outputDir, { recursive: true })
+
+    // Write PDF to disk
+    await fs.promises.writeFile(outputPath, buffer)
+
+    return { ok: true, filePath: outputPath }
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return {
+        ok: false,
+        errorMessage: `PDF download timeout after ${timeoutMs / 1000} seconds`,
+      }
+    }
+    return {
+      ok: false,
+      errorMessage: `PDF download failed: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
  * List organizations (special endpoint without organization_id)
  */
 export async function zohoListOrganizations(): Promise<ParsedResponse<Record<string, unknown>>> {

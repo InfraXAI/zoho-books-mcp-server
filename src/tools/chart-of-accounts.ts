@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 import type { FastMCP } from "fastmcp"
-import { zohoGet, zohoPost } from "../api/client.js"
+import { zohoGet, zohoPost, zohoPut } from "../api/client.js"
 import type { Account, AccountTransaction } from "../api/types.js"
 import { optionalOrganizationIdSchema } from "../utils/validation.js"
 
@@ -258,6 +258,125 @@ Useful for account reconciliation and analysis.`,
         .join("\n\n")
 
       return `**Account Transactions** (${transactions.length} transactions)\n\n${formatted}`
+    },
+  })
+
+  // Update Account
+  server.addTool({
+    name: "update_account",
+    description: `Update an existing account in the chart of accounts.
+Can rename, add account codes, update description, or change parent account.
+Note: System/default accounts may have restrictions on what can be changed.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      account_id: z.string().describe("Account ID to update"),
+      account_name: z.string().optional().describe("New name for the account"),
+      account_code: z.string().optional().describe("Account code for reference"),
+      description: z.string().optional().describe("Description of the account"),
+      parent_account_id: z.string().optional().describe("Parent account ID for sub-accounts"),
+    }),
+    annotations: {
+      title: "Update Account",
+      readOnlyHint: false,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const payload: Record<string, unknown> = {}
+
+      if (args.account_name) payload.account_name = args.account_name
+      if (args.account_code) payload.account_code = args.account_code
+      if (args.description) payload.description = args.description
+      if (args.parent_account_id) payload.parent_account_id = args.parent_account_id
+
+      if (Object.keys(payload).length === 0) {
+        return "No fields to update. Provide at least one field (account_name, account_code, description, or parent_account_id)."
+      }
+
+      const result = await zohoPut<{ account: Account }>(
+        `/chartofaccounts/${args.account_id}`,
+        args.organization_id,
+        payload
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to update account"
+      }
+
+      const account = result.data?.account
+
+      if (!account) {
+        return "Account updated but no details returned"
+      }
+
+      return `**Account Updated Successfully**
+
+- **Name**: ${account.account_name}
+- **Account ID**: \`${account.account_id}\`
+- **Code**: ${account.account_code || "N/A"}
+- **Type**: ${account.account_type_formatted}`
+    },
+  })
+
+  // Mark Account Inactive
+  server.addTool({
+    name: "mark_account_inactive",
+    description: `Mark an account as inactive. Inactive accounts are hidden from dropdowns and reports.
+Only works on user-created accounts with no transactions. System accounts cannot be deactivated.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      account_id: z.string().describe("Account ID to mark inactive"),
+    }),
+    annotations: {
+      title: "Mark Account Inactive",
+      readOnlyHint: false,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const result = await zohoPost<{ message: string }>(
+        `/chartofaccounts/${args.account_id}/inactive`,
+        args.organization_id,
+        {}
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to mark account inactive"
+      }
+
+      return `**Account marked inactive successfully.** Account ID: \`${args.account_id}\``
+    },
+  })
+
+  // Mark Account Active
+  server.addTool({
+    name: "mark_account_active",
+    description: `Reactivate an inactive account. Makes it visible again in dropdowns and reports.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      account_id: z.string().describe("Account ID to reactivate"),
+    }),
+    annotations: {
+      title: "Mark Account Active",
+      readOnlyHint: false,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const result = await zohoPost<{ message: string }>(
+        `/chartofaccounts/${args.account_id}/active`,
+        args.organization_id,
+        {}
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to mark account active"
+      }
+
+      return `**Account reactivated successfully.** Account ID: \`${args.account_id}\``
     },
   })
 }

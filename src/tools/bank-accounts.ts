@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 import type { FastMCP } from "fastmcp"
-import { zohoGet } from "../api/client.js"
+import { zohoGet, zohoPost } from "../api/client.js"
 import type { BankAccount, BankTransaction } from "../api/types.js"
 import {
   entityIdSchema,
@@ -197,6 +197,85 @@ These are transactions imported/entered in Zoho, not live bank feeds.`,
         .join("\n\n")
 
       return `**Bank Transactions** (${transactions.length} transactions)\n\n${formatted}`
+    },
+  })
+
+  // Match Bank Transaction
+  server.addTool({
+    name: "match_bank_transaction",
+    description: `Match an uncategorized bank feed transaction with an existing Zoho transaction.
+Links the imported bank entry to an already-recorded expense, journal, or payment.
+Use list_bank_transactions with status="uncategorized" to find bank transactions to match.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      bank_transaction_id: entityIdSchema.describe("The uncategorized bank transaction ID to match"),
+      account_id: entityIdSchema.describe("Bank account ID"),
+      match_transaction_id: entityIdSchema.describe("The existing transaction ID (expense/journal/payment) to match with"),
+      match_transaction_type: z.enum(["expense", "journal", "customer_payment", "vendor_payment", "bill", "invoice"])
+        .describe("Type of the existing transaction to match"),
+    }),
+    annotations: {
+      title: "Match Bank Transaction",
+      readOnlyHint: false,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const payload = {
+        transactions_to_be_matched: [{
+          transaction_id: args.match_transaction_id,
+          transaction_type: args.match_transaction_type,
+        }],
+      }
+
+      const result = await zohoPost<{ message: string }>(
+        `/banktransactions/match/${args.bank_transaction_id}?account_id=${args.account_id}`,
+        args.organization_id,
+        payload
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to match bank transaction"
+      }
+
+      return `**Bank transaction matched successfully.** Bank txn \`${args.bank_transaction_id}\` → ${args.match_transaction_type} \`${args.match_transaction_id}\``
+    },
+  })
+
+  // Exclude Uncategorized Bank Transactions
+  server.addTool({
+    name: "exclude_bank_transactions",
+    description: `Exclude uncategorized bank transactions from reconciliation.
+Use this for transactions that are already manually recorded and don't need bank feed linking.
+Excluded transactions won't show as "uncategorized" anymore.`,
+    parameters: z.object({
+      organization_id: optionalOrganizationIdSchema.describe(
+        "Zoho org ID (uses ZOHO_ORGANIZATION_ID env var if not provided)"
+      ),
+      transaction_ids: z.array(z.string()).min(1).describe("Array of bank transaction IDs to exclude"),
+    }),
+    annotations: {
+      title: "Exclude Bank Transactions",
+      readOnlyHint: false,
+      openWorldHint: true,
+    },
+    execute: async (args) => {
+      const payload = {
+        transaction_ids: args.transaction_ids,
+      }
+
+      const result = await zohoPost<{ message: string }>(
+        "/banktransactions/uncategorized/exclude",
+        args.organization_id,
+        payload
+      )
+
+      if (!result.ok) {
+        return result.errorMessage || "Failed to exclude bank transactions"
+      }
+
+      return `**${args.transaction_ids.length} bank transaction(s) excluded successfully.**`
     },
   })
 }

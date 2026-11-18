@@ -2,7 +2,7 @@
  * Zoho Books MCP Server — Chanakya CFO Toolkit
  *
  * A Model Context Protocol server for Zoho Books integration.
- * 86 tools across 16 modules for complete financial management.
+ * 87 tools across 16 modules for complete financial management.
  */
 
 import { FastMCP } from "fastmcp"
@@ -46,7 +46,7 @@ Zoho Books MCP server — AI CFO toolkit for complete financial management.
 - Use list_organizations to see all available orgs with aliases and active status.
 - Use get_organization_summary for a quick financial snapshot of any org.
 
-## Available Tools (88)
+## Available Tools (89)
 
 ### Chart of Accounts
 - list_accounts, get_account, create_account, list_account_transactions
@@ -64,7 +64,7 @@ Zoho Books MCP server — AI CFO toolkit for complete financial management.
 
 ### Invoices (Accounts Receivable)
 - list_invoices, get_invoice, create_invoice, update_invoice
-- send_invoice, void_invoice, email_invoice
+- send_invoice, void_invoice, email_invoice, download_invoice_pdf
 - add_invoice_attachment, get_invoice_attachment, delete_invoice_attachment
 
 ### Bills (Accounts Payable)

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import {
   src_default
-} from "./chunk-6HCKFVG4.js";
+} from "./chunk-XA767VQ2.js";
 import "./chunk-56R5MHE5.js";
 
 // src/bin.ts
